@@ -60,5 +60,5 @@ fn main() {
     let result = compute_frame_ssimulacra2(source_data, distorted_data)
         .expect("Failed to calculate ssimulacra2");
 
-    eprintln!("{:.8}", result);
+    println!("{result:.8}");
 }
