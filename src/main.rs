@@ -1,17 +1,17 @@
+use clap::Parser;
 use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, TransferCharacteristic, Xyb};
 use yuvxyb::Rgb;
-use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-   /// Source image
-   #[arg(help = "Origional unmodified image", value_hint = clap::ValueHint::FilePath)]
-   source: String,
+    /// Source image
+    #[arg(help = "Origional unmodified image", value_hint = clap::ValueHint::FilePath)]
+    source: String,
 
-   /// Distorted image
-   #[arg(help = "Distorted image", value_hint = clap::ValueHint::FilePath)]
-   distorted: String,
+    /// Distorted image
+    #[arg(help = "Distorted image", value_hint = clap::ValueHint::FilePath)]
+    distorted: String,
 }
 
 fn main() {
@@ -35,9 +35,9 @@ fn main() {
             TransferCharacteristic::SRGB,
             ColorPrimaries::BT709,
         )
-        .unwrap(),
+        .expect("Failed to process source_data into RGB"),
     )
-    .unwrap();
+    .expect("Failed to process source_data into XYB");
 
     let distorted_data = distorted
         .to_rgb32f()
@@ -53,11 +53,12 @@ fn main() {
             TransferCharacteristic::SRGB,
             ColorPrimaries::BT709,
         )
-        .unwrap(),
+        .expect("Failed to process distorted_data into RGB"),
     )
-    .unwrap();
+    .expect("Failed to process distorted_data into XYB");
 
-    let result = compute_frame_ssimulacra2(source_data, distorted_data).unwrap();
+    let result = compute_frame_ssimulacra2(source_data, distorted_data)
+        .expect("Failed to calculate ssimulacra2");
 
     eprintln!("{:.8}", result);
 }
