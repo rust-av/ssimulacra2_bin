@@ -6,7 +6,7 @@ use yuvxyb::Rgb;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Source image
-    #[arg(help = "Origional unmodified image", value_hint = clap::ValueHint::FilePath)]
+    #[arg(help = "Original unmodified image", value_hint = clap::ValueHint::FilePath)]
     source: String,
 
     /// Distorted image
