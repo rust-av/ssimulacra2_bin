@@ -1,9 +1,9 @@
-use clap::{Parser};
-use std::{path::Path};
-use std::sync::{Mutex, Arc};
+use clap::Parser;
+use progress_bar::*;
 use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, TransferCharacteristic, Xyb};
 use std::fs;
-use progress_bar::*;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 use yuvxyb::Rgb;
 
 #[derive(Parser, Debug)]
@@ -50,9 +50,26 @@ async fn main() {
         // println!("{:#?}", results);
 
         // Print Mean, min, max
-        println!("Min: {}", results.iter().map(|r| r.ssimulacra2).min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-        println!("Max: {}", results.iter().map(|r| r.ssimulacra2).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-        println!("Mean: {}", results.iter().map(|r| r.ssimulacra2).sum::<f64>() / results.len() as f64);
+        println!(
+            "Min: {}",
+            results
+                .iter()
+                .map(|r| r.ssimulacra2)
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap()
+        );
+        println!(
+            "Max: {}",
+            results
+                .iter()
+                .map(|r| r.ssimulacra2)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap()
+        );
+        println!(
+            "Mean: {}",
+            results.iter().map(|r| r.ssimulacra2).sum::<f64>() / results.len() as f64
+        );
 
         // Print CSV
         if let Some(out) = out_clone {
@@ -121,58 +138,60 @@ fn parse(source_path: String, distorted_path: String) -> f64 {
 async fn handle_folder(args: Args) -> Vec<FrameResult> {
     let files = fs::read_dir(args.source.clone()).unwrap();
 
-        let results: Arc<Mutex<Vec<FrameResult>>> = Arc::new(Mutex::new(Vec::new()));
+    let results: Arc<Mutex<Vec<FrameResult>>> = Arc::new(Mutex::new(Vec::new()));
 
-        // let mut count = 0;
+    // let mut count = 0;
 
-        // TODO: This is a bit ugly, but it works. Reopen the folder and iterate over it again because count consumes the iterator.
-        let len = fs::read_dir(args.source.clone()).unwrap().count();
+    // TODO: This is a bit ugly, but it works. Reopen the folder and iterate over it again because count consumes the iterator.
+    let len = fs::read_dir(args.source.clone()).unwrap().count();
 
-        println!("Processing {} files", len);
+    println!("Processing {} files", len);
 
-        let mut handles = vec![];
+    let mut handles = vec![];
 
-        init_progress_bar(len);
-        set_progress_bar_action("Processing", Color::Blue, Style::Bold);
+    init_progress_bar(len);
+    set_progress_bar_action("Processing", Color::Blue, Style::Bold);
 
-        // TODO: Figure out how to multithread this? 
-        for (count, path) in files.enumerate() {
-            // count += 1;
+    // TODO: Figure out how to multithread this?
+    for (count, path) in files.enumerate() {
+        // count += 1;
 
-            let arg_source = args.source.clone();
-            let arg_distorted = args.distorted.clone();
+        let arg_source = args.source.clone();
+        let arg_distorted = args.distorted.clone();
 
-            let results_clone = Arc::clone(&results);
+        let results_clone = Arc::clone(&results);
 
-            handles.push(tokio::spawn(async move {
-            
+        handles.push(tokio::spawn(async move {
             let src_path = Path::new(&arg_source);
             let dst_path = Path::new(&arg_distorted);
 
             let file_name = path.unwrap().file_name();
 
             let ssimulacra2_result = parse(
-                src_path.join(file_name.clone()).to_str().unwrap().to_owned(),
+                src_path
+                    .join(file_name.clone())
+                    .to_str()
+                    .unwrap()
+                    .to_owned(),
                 dst_path.join(file_name).to_str().unwrap().to_owned(),
             );
 
-            results_clone.lock().unwrap().push(FrameResult{
+            results_clone.lock().unwrap().push(FrameResult {
                 frame: count.try_into().unwrap(),
                 ssimulacra2: ssimulacra2_result,
             });
 
             // println!("Frame {}/{} complete!", count, len);
             inc_progress_bar();
+        }));
+    }
 
-            }));
+    futures::future::join_all(handles).await;
 
-        }
+    finalize_progress_bar();
 
-        futures::future::join_all(handles).await;
-
-        finalize_progress_bar();
-
-        let x = results.lock().unwrap().to_vec(); x
+    let x = results.lock().unwrap().to_vec();
+    x
 }
 
 // struct to hold frame number and ssimulacra2 value
