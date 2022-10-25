@@ -1,3 +1,7 @@
+## Version 0.2.1
+
+- Fix compilation with no default features
+
 ## Version 0.2.0
 
 - Add support for video comparison
