@@ -1,20 +1,35 @@
 [package]
 name = "ssimulacra2_rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"
 homepage = "https://github.com/rust-av/ssimulacra2_bin"
 license = "BSD-2-Clause"
+rust-version = "1.61"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+av-metrics-decoders = { version = "0.1.8", features = [
+    "ffmpeg",
+], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }
 image = "0.24.4"
+num-traits = "0.2.15"
+plotters = { version = "0.3.4", default_features = false, features = [
+    "histogram",
+    "svg_backend",
+] }
 ssimulacra2 = "0.1.0"
+statrs = "0.16.0"
 yuvxyb = "0.1.3"
 
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+[features]
+default = ["ffmpeg"]
+ffmpeg = ["av-metrics-decoders"]
+ffmpeg_build = ["ffmpeg", "av-metrics-decoders/ffmpeg_build"]
