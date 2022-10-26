@@ -15,6 +15,7 @@ av-metrics-decoders = { version = "0.1.9", features = [
     "ffmpeg",
 ], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }
+ffmpeg-next = { version = "5.1.1", optional = true }
 image = "0.24.4"
 num-traits = { version = "0.2.15", optional = true }
 plotters = { version = "0.3.4", default_features = false, features = [
@@ -31,5 +32,16 @@ codegen-units = 1
 
 [features]
 default = ["ffmpeg"]
-ffmpeg = ["av-metrics-decoders", "plotters", "statrs", "num-traits"]
+ffmpeg = [
+    "av-metrics-decoders",
+    "plotters",
+    "statrs",
+    "num-traits",
+    "ffmpeg-next",
+    "ffmpeg-next/non-exhaustive-enums",
+]
 ffmpeg_build = ["ffmpeg", "av-metrics-decoders/ffmpeg_build"]
+
+[patch.crates-io]
+ffmpeg-next = { git = "https://github.com/FreezyLemon/rust-ffmpeg", branch = "non-exhaustive-enum" }
+ffmpeg-sys-next = { git = "https://github.com/FreezyLemon/rust-ffmpeg-sys", branch = "non-exhaustive-enum" }
