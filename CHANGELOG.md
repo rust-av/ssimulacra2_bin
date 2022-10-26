@@ -1,3 +1,9 @@
+## Version 0.2.2
+
+- Fix decoding of AV1 files with overlays when using `ffmpeg_build` feature
+  - Or at least attempt to. There still seems to be some flakiness with linking libdav1d.
+- Add support for YUVJ files
+
 ## Version 0.2.1
 
 - Fix compilation with no default features

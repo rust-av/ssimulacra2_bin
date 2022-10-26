@@ -1,6 +1,6 @@
 [package]
 name = "ssimulacra2_rs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"
@@ -11,7 +11,7 @@ rust-version = "1.61"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-av-metrics-decoders = { version = "0.1.8", features = [
+av-metrics-decoders = { version = "0.1.9", features = [
     "ffmpeg",
 ], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }

@@ -83,7 +83,7 @@ pub fn compare_videos(
         .get_decimation()
         .unwrap_or((0, 0));
     let dst_config = YuvConfig {
-        bit_depth: source.get_bit_depth() as u8,
+        bit_depth: distorted.get_bit_depth() as u8,
         subsampling_x: dst_dec.0 as u8,
         subsampling_y: dst_dec.1 as u8,
         full_range: dst_full_range,

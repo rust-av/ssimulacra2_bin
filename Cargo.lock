@@ -89,9 +89,9 @@ dependencies = [
 
 [[package]]
 name = "av-metrics-decoders"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e45f684ff9da3d9f305be2e6ebc682ea99aefbd11d7577e6f5edd1eed44235"
+checksum = "0edc15b0ad08d5dd274d9234b6e61222d45c61364c08fe8c6cb1d3f8510dc069"
 dependencies = [
  "av-metrics",
  "ffmpeg-next",
@@ -1092,7 +1092,7 @@ dependencies = [
 
 [[package]]
 name = "ssimulacra2_rs"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "av-metrics-decoders",
  "clap",
