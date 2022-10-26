@@ -4,3 +4,15 @@
 [![LICENSE](https://img.shields.io/crates/l/ssimulacra2_rs?style=for-the-badge)](https://github.com/rust-av/ssimulacra2_bin/blob/main/LICENSE)
 
 Binary interface to the Rust implementation of the SSIMULACRA2 metric: https://github.com/rust-av/ssimulacra2
+
+## Required packages for video support:
+
+Ubuntu/Debian:
+```bash
+sudo apt install libavutil-dev libavformat-dev clang
+```
+
+Arch:
+```bash
+sudo pacman -S ffmpeg # Keep install dependencies
+```
