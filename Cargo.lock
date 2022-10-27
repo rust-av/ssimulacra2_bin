@@ -33,6 +33,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayref"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
+
+[[package]]
 name = "as-slice"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1076,12 +1082,13 @@ dependencies = [
 
 [[package]]
 name = "ssimulacra2"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b23b363f7925da691acdf73d37f779fd19cc52c685e2c4b7da1e486efdeb9464"
+checksum = "b88af54c948ea41edce0ec14a32cf2282331f7714178a0f216b7bbec640a9e9b"
 dependencies = [
  "aligned",
  "anyhow",
+ "arrayref",
  "nalgebra 0.31.2",
  "num-traits",
  "wide",
@@ -1100,7 +1107,6 @@ dependencies = [
  "plotters",
  "ssimulacra2",
  "statrs",
- "yuvxyb",
 ]
 
 [[package]]
@@ -1345,9 +1351,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "yuvxyb"
-version = "0.1.5"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c26f6724e7193cac5689a8cb9f248e1f6b3446a85d63f33a24567df6f6855159"
+checksum = "10afac33e25fb63dc03604c751e124f43ed9bb50c8235bf2e79d39fa46c0d42c"
 dependencies = [
  "anyhow",
  "av-data",

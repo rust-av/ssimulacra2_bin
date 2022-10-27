@@ -6,11 +6,10 @@ use std::{
 use av_metrics_decoders::{Decoder, FfmpegDecoder};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
-    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic, Xyb,
-    Yuv, YuvConfig,
+    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Rgb, TransferCharacteristic,
+    Xyb, Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
-use yuvxyb::Rgb;
 
 #[allow(clippy::too_many_arguments)]
 pub fn compare_videos(

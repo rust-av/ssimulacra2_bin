@@ -6,9 +6,8 @@ use self::video::*;
 use clap::{Parser, Subcommand};
 #[cfg(feature = "ffmpeg")]
 use ssimulacra2::MatrixCoefficients;
-use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, TransferCharacteristic, Xyb};
+use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, Rgb, TransferCharacteristic, Xyb};
 use std::path::{Path, PathBuf};
-use yuvxyb::Rgb;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
