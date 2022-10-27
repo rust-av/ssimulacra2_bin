@@ -1,3 +1,7 @@
+## Version 0.3.0
+
+- Implement upstream changes from https://github.com/libjxl/libjxl/pull/1848
+
 ## Version 0.2.2
 
 - Fix decoding of AV1 files with overlays when using `ffmpeg_build` feature

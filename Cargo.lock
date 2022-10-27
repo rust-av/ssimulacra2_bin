@@ -1097,7 +1097,7 @@ dependencies = [
 
 [[package]]
 name = "ssimulacra2_rs"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "av-metrics-decoders",
  "clap",
