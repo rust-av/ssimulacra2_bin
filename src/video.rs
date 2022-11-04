@@ -28,7 +28,7 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let mut progress = if termion::is_tty(&stderr()) {
+    let progress = if termion::is_tty(&stderr()) {
         ProgressBar::new_spinner().with_style(
             ProgressStyle::with_template(
                 "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",
@@ -197,7 +197,7 @@ pub fn compare_videos(
         chart
             .configure_mesh()
             .disable_x_mesh()
-            .bold_line_style(&WHITE.mix(0.3))
+            .bold_line_style(WHITE.mix(0.3))
             .y_desc("Score")
             .y_label_style(("sans-serif", 16, &WHITE))
             .x_desc("Frame")
