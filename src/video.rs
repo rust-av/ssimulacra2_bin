@@ -1,10 +1,5 @@
-use std::io::stderr;
-use std::{
-    path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use av_metrics_decoders::{Decoder, FfmpegDecoder};
+use crossterm::tty::IsTty;
 use indicatif::{ProgressBar, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
@@ -12,6 +7,11 @@ use ssimulacra2::{
     Xyb, Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
+use std::io::stderr;
+use std::{
+    path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[allow(clippy::too_many_arguments)]
 pub fn compare_videos(
@@ -28,7 +28,7 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let progress = if termion::is_tty(&stderr()) {
+    let progress = if stderr().is_tty() {
         ProgressBar::new_spinner().with_style(
             ProgressStyle::with_template(
                 "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",

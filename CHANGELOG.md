@@ -1,3 +1,7 @@
+## Version 0.3.2
+
+- Use crossterm instead of termion for Windows compatibility
+
 ## Version 0.3.1
 
 - Add a progress bar
