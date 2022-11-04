@@ -1,9 +1,11 @@
+use std::io::stderr;
 use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use av_metrics_decoders::{Decoder, FfmpegDecoder};
+use indicatif::{ProgressBar, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
     compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Rgb, TransferCharacteristic,
@@ -26,6 +28,17 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
+    let mut progress = if termion::is_tty(&stderr()) {
+        ProgressBar::new_spinner().with_style(
+            ProgressStyle::with_template(
+                "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",
+            )
+            .unwrap(),
+        )
+    } else {
+        ProgressBar::hidden()
+    };
+
     let mut source = FfmpegDecoder::new(source).unwrap();
     let mut distorted = FfmpegDecoder::new(distorted).unwrap();
 
@@ -149,8 +162,10 @@ pub fn compare_videos(
         }
         results.push(result);
         frame += 1;
+        progress.inc(1);
     }
 
+    progress.finish();
     let mut data = Data::new(results.clone());
     println!("Video Score for {} frames", frame);
     println!("Mean: {:.8}", data.mean().unwrap());
