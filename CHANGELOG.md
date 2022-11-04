@@ -1,3 +1,8 @@
+## Version 0.3.1
+
+- Add a progress bar
+- Bump dependencies for a pretty healthy speed increase of about 20%
+
 ## Version 0.3.0
 
 - Implement upstream changes from https://github.com/libjxl/libjxl/pull/1848
