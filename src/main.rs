@@ -40,6 +40,10 @@ enum Commands {
         #[arg(help = "Distorted video", value_hint = clap::ValueHint::FilePath)]
         distorted: PathBuf,
 
+        /// How many worker threads to use for decoding & calculating scores.
+        #[arg(long, short)]
+        threads: Option<usize>,
+
         /// Whether to output a frame-by-frame graph of scores.
         #[arg(long, short)]
         graph: bool,
@@ -89,6 +93,7 @@ fn main() {
         Commands::Video {
             source,
             distorted,
+            threads,
             graph,
             verbose,
             src_matrix,
@@ -100,6 +105,7 @@ fn main() {
             dst_primaries,
             dst_full_range,
         } => {
+            let threads = threads.unwrap_or(1).max(1);
             let src_matrix = src_matrix
                 .map(|i| parse_matrix(&i))
                 .unwrap_or(MatrixCoefficients::Unspecified);
@@ -121,6 +127,7 @@ fn main() {
             compare_videos(
                 &source,
                 &distorted,
+                threads,
                 graph,
                 verbose,
                 src_matrix,
