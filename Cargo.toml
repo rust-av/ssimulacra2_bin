@@ -20,9 +20,9 @@ ffmpeg-next = { version = "5.1.1", optional = true }
 image = "0.24.4"
 indicatif = "0.17.1"
 num-traits = { version = "0.2.15", optional = true }
-plotters = { version = "0.3.4", default_features = false, features = [
-    "histogram",
-    "svg_backend",
+plotters = { version = "0.3.4", default-features = false, features = [
+    "bitmap_backend",
+    "area_series",
 ], optional = true }
 ssimulacra2 = "0.2.0"
 statrs = { version = "0.16.0", optional = true }

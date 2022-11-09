@@ -1,5 +1,6 @@
 use av_metrics_decoders::{Decoder, FfmpegDecoder};
 use crossterm::tty::IsTty;
+use image::ColorType;
 use indicatif::{ProgressBar, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
@@ -178,41 +179,52 @@ pub fn compare_videos(
         use plotters::prelude::*;
 
         let out_path = PathBuf::from(format!(
-            "ssimulacra2-video-{}.svg",
+            "ssimulacra2-video-{}.png",
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs()
         ));
+        let width = 1500u32;
+        let height = 1000u32;
+        let mut image_buffer = vec![0; (width * height * 3) as usize].into_boxed_slice();
 
-        let root = SVGBackend::new(&out_path, (1500, 1000)).into_drawing_area();
-        root.fill(&BLACK).unwrap();
-        let mut chart = ChartBuilder::on(&root)
-            .x_label_area_size(40)
-            .y_label_area_size(50)
-            .margin(5)
-            .caption("SSIMULACRA2", ("sans-serif", 50.0))
-            .build_cartesian_2d(0..frame, 0f32..100f32)
-            .unwrap();
-        chart
-            .configure_mesh()
-            .disable_x_mesh()
-            .bold_line_style(WHITE.mix(0.3))
-            .y_desc("Score")
-            .y_label_style(("sans-serif", 16, &WHITE))
-            .x_desc("Frame")
-            .x_label_style(("sans-serif", 16, &WHITE))
-            .axis_desc_style(("sans-serif", 18, &WHITE))
-            .draw()
-            .unwrap();
-        chart
-            .draw_series(
-                Histogram::vertical(&chart)
-                    .style(CYAN.mix(0.5).filled())
-                    .data(results.into_iter().enumerate().map(|(i, v)| (i, v as f32))),
-            )
-            .unwrap();
-        root.present().expect("Unable to write result to file");
+        {
+            let root =
+                BitMapBackend::with_buffer(&mut image_buffer, (width, height)).into_drawing_area();
+            root.fill(&BLACK).unwrap();
+            let mut chart = ChartBuilder::on(&root)
+                .set_label_area_size(LabelAreaPosition::Left, 60)
+                .set_label_area_size(LabelAreaPosition::Bottom, 60)
+                .caption("SSIMULACRA2", ("sans-serif", 50.0))
+                .build_cartesian_2d(0..frame, 0f32..100f32)
+                .unwrap();
+            chart
+                .configure_mesh()
+                .disable_x_mesh()
+                .bold_line_style(WHITE.mix(0.3))
+                .y_desc("Score")
+                .y_label_style(("sans-serif", 16, &WHITE))
+                .x_desc("Frame")
+                .x_label_style(("sans-serif", 16, &WHITE))
+                .axis_desc_style(("sans-serif", 18, &WHITE))
+                .draw()
+                .unwrap();
+            chart
+                .draw_series(
+                    AreaSeries::new(
+                        results.into_iter().enumerate().map(|(i, v)| (i, v as f32)),
+                        0.0,
+                        CYAN.mix(0.5),
+                    )
+                    .border_style(CYAN.filled()),
+                )
+                .unwrap();
+            root.present().expect("Unable to generate image");
+        }
+
+        image::save_buffer(&out_path, &image_buffer, width, height, ColorType::Rgb8)
+            .expect("Unable to save graph image");
 
         println!();
         println!("Graph written to {}", out_path.to_string_lossy());
