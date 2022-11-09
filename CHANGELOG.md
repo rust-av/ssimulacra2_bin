@@ -1,3 +1,7 @@
+## Version 0.3.3
+
+- Fix graphing
+
 ## Version 0.3.2
 
 - Use crossterm instead of termion for Windows compatibility
