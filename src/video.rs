@@ -5,7 +5,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
     compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Rgb, TransferCharacteristic,
-    Xyb, Yuv, YuvConfig,
+    Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
 use std::io::stderr;
@@ -154,10 +154,9 @@ pub fn compare_videos(
                 }
             }
         };
-        let src_xyb = Xyb::try_from(src_rgb).unwrap();
-        let dst_xyb = Xyb::try_from(dst_rgb).unwrap();
+
         let result =
-            compute_frame_ssimulacra2(src_xyb, dst_xyb).expect("Failed to calculate ssimulacra2");
+            compute_frame_ssimulacra2(src_rgb, dst_rgb).expect("Failed to calculate ssimulacra2");
         if verbose {
             println!("Frame {frame}: {result:.8}");
         }
