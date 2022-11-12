@@ -159,11 +159,8 @@ pub fn compare_videos(
             )
             .unwrap()
             .with_key("per_sec", |s: &ProgressState, w: &mut dyn std::fmt::Write|
-                write!(w, "{:5.02} FPS", s.per_sec()).unwrap()
+                write!(w, "{:5.02} fps", s.per_sec()).unwrap()
             )
-            .with_key("pos", |s: &ProgressState, w: &mut dyn std::fmt::Write|
-                write!(w, "{:6}", s.pos()).unwrap()
-            ),
         )
     } else {
         ProgressBar::hidden()
