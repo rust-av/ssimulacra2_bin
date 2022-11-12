@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DEPS: libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev clang libfontconfig-dev
 
 jobs:
   build:
@@ -16,6 +17,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install Dependencies
+      run: apt-get update && apt-get install -y ${{ env.DEPS }}
     - name: Build
       run: cargo clippy --verbose
     - name: Run tests
