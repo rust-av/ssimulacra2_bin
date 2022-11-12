@@ -41,7 +41,7 @@ fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(FfmpegDecoder, FfmpegDecoder)>, s
 pub fn compare_videos(
     source: &Path,
     distorted: &Path,
-    threads: usize,
+    frame_threads: usize,
     graph: bool,
     verbose: bool,
     mut src_matrix: MatrixCoefficients,
@@ -123,7 +123,7 @@ pub fn compare_videos(
     let dst_bd = distorted.get_bit_depth();
 
     let decoders = Arc::new(Mutex::new((source, distorted)));
-    for _ in 0..threads {
+    for _ in 0..frame_threads {
         let decoders = Arc::clone(&decoders);
         let result_tx = result_tx.clone();
 

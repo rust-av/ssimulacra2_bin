@@ -41,8 +41,9 @@ enum Commands {
         distorted: PathBuf,
 
         /// How many worker threads to use for decoding & calculating scores.
+        /// Note: Memory usage increases linearly with the number of workers.
         #[arg(long, short)]
-        threads: Option<usize>,
+        frame_threads: Option<usize>,
 
         /// Whether to output a frame-by-frame graph of scores.
         #[arg(long, short)]
@@ -93,7 +94,7 @@ fn main() {
         Commands::Video {
             source,
             distorted,
-            threads,
+            frame_threads,
             graph,
             verbose,
             src_matrix,
@@ -105,7 +106,7 @@ fn main() {
             dst_primaries,
             dst_full_range,
         } => {
-            let threads = threads.unwrap_or(1).max(1);
+            let frame_threads = frame_threads.unwrap_or(1).max(1);
             let src_matrix = src_matrix
                 .map(|i| parse_matrix(&i))
                 .unwrap_or(MatrixCoefficients::Unspecified);
@@ -127,7 +128,7 @@ fn main() {
             compare_videos(
                 &source,
                 &distorted,
-                threads,
+                frame_threads,
                 graph,
                 verbose,
                 src_matrix,
