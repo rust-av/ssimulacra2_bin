@@ -2,9 +2,15 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    paths-ignore:
+      - "*.yml"
+      - .gitignore
+      - "*.md"
   pull_request:
-    branches: [ "main" ]
+    paths-ignore:
+      - "*.yml"
+      - .gitignore
+      - "*.md"
 
 env:
   CARGO_TERM_COLOR: always
