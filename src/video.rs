@@ -1,13 +1,14 @@
-use av_metrics_decoders::{Decoder, FfmpegDecoder, Pixel, Frame};
+use av_metrics_decoders::{Decoder, FfmpegDecoder, Pixel};
 use crossterm::tty::IsTty;
 use image::ColorType;
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
     compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic,
-    Yuv, YuvConfig, LinearRgb,
+    Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
+use std::collections::BTreeMap;
 use std::io::stderr;
 use std::sync::{Mutex, Arc, mpsc};
 use std::{
@@ -15,14 +16,17 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(FfmpegDecoder, FfmpegDecoder)>, src_yuvcfg: &YuvConfig, dst_yuvcfg: &YuvConfig) -> Option<f64> {
-    let (src_frame, dst_frame) = {
+fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDecoder))>, src_yuvcfg: &YuvConfig, dst_yuvcfg: &YuvConfig) -> Option<(usize, f64)> {
+    let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
-        let src_frame = guard.0.read_video_frame::<S>();
-        let dst_frame = guard.1.read_video_frame::<D>();
-
+        let curr_frame = guard.0;
+        
+        let src_frame = guard.1.0.read_video_frame::<S>();
+        let dst_frame = guard.1.1.read_video_frame::<D>();
+        
         if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
-            (sf, df)
+            guard.0 += 1;
+            (curr_frame, (sf, df))
         } else {
             return None
         }
@@ -31,10 +35,11 @@ fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(FfmpegDecoder, FfmpegDecoder)>, s
     let src_yuv = Yuv::new(src_frame, *src_yuvcfg).unwrap();
     let dst_yuv = Yuv::new(dst_frame, *dst_yuvcfg).unwrap();
 
-    Some(
+    Some((
+        frame_idx,
         compute_frame_ssimulacra2(src_yuv, dst_yuv)
             .expect("Failed to calculate ssimulacra2")
-    )
+    ))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -122,7 +127,8 @@ pub fn compare_videos(
     let src_bd = source.get_bit_depth();
     let dst_bd = distorted.get_bit_depth();
 
-    let decoders = Arc::new(Mutex::new((source, distorted)));
+    let current_frame = 0usize;
+    let decoders = Arc::new(Mutex::new((current_frame, (source, distorted))));
     for _ in 0..frame_threads {
         let decoders = Arc::clone(&decoders);
         let result_tx = result_tx.clone();
@@ -149,9 +155,6 @@ pub fn compare_videos(
     // Needs to be dropped or the main thread never stops waiting for scores
     drop(result_tx);
 
-    let mut results = Vec::new();
-    let mut frame = 0usize;
-
     let progress = if stderr().is_tty() {
         ProgressBar::new_spinner().with_style(
             ProgressStyle::with_template(
@@ -166,16 +169,22 @@ pub fn compare_videos(
         ProgressBar::hidden()
     };
 
+    let mut results = BTreeMap::new();
     for score in result_rx {
-        results.push(score);
-        frame += 1;
+        if verbose {
+            println!("Frame {}: {:.8}", score.0, score.1);
+        }
+
+        results.insert(score.0, score.1);
         progress.inc(1);
     }
 
     progress.finish();
 
+    let results: Vec<f64> = results.into_values().collect();
+    let frames = results.len();
     let mut data = Data::new(results.clone());
-    println!("Video Score for {} frames", frame);
+    println!("Video Score for {} frames", frames);
     println!("Mean: {:.8}", data.mean().unwrap());
     println!("Median: {:.8}", data.median());
     println!("Std Dev: {:.8}", data.std_dev().unwrap());
@@ -204,7 +213,7 @@ pub fn compare_videos(
                 .set_label_area_size(LabelAreaPosition::Left, 60)
                 .set_label_area_size(LabelAreaPosition::Bottom, 60)
                 .caption("SSIMULACRA2", ("sans-serif", 50.0))
-                .build_cartesian_2d(0..frame, 0f32..100f32)
+                .build_cartesian_2d(0..frames, 0f32..100f32)
                 .unwrap();
             chart
                 .configure_mesh()
