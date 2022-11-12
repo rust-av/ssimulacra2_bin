@@ -1,0 +1,8 @@
+/target
+/.vscode
+/.idea
+/.github
+/.devcontainer
+/.git
+/.circleci
+/test_files
