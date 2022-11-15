@@ -1,23 +1,52 @@
-use av_metrics_decoders::{Decoder, FfmpegDecoder};
+use av_metrics_decoders::{Decoder, FfmpegDecoder, Pixel};
 use crossterm::tty::IsTty;
 use image::ColorType;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
-    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Rgb, TransferCharacteristic,
+    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic,
     Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
+use std::collections::BTreeMap;
 use std::io::stderr;
+use std::sync::{Mutex, Arc, mpsc};
 use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 
+fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDecoder))>, src_yuvcfg: &YuvConfig, dst_yuvcfg: &YuvConfig) -> Option<(usize, f64)> {
+    let (frame_idx, (src_frame, dst_frame)) = {
+        let mut guard = mtx.lock().unwrap();
+        let curr_frame = guard.0;
+        
+        let src_frame = guard.1.0.read_video_frame::<S>();
+        let dst_frame = guard.1.1.read_video_frame::<D>();
+        
+        if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
+            guard.0 += 1;
+            (curr_frame, (sf, df))
+        } else {
+            return None
+        }
+    };
+
+    let src_yuv = Yuv::new(src_frame, *src_yuvcfg).unwrap();
+    let dst_yuv = Yuv::new(dst_frame, *dst_yuvcfg).unwrap();
+
+    Some((
+        frame_idx,
+        compute_frame_ssimulacra2(src_yuv, dst_yuv)
+            .expect("Failed to calculate ssimulacra2")
+    ))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn compare_videos(
     source: &Path,
     distorted: &Path,
+    frame_threads: usize,
     graph: bool,
     verbose: bool,
     mut src_matrix: MatrixCoefficients,
@@ -29,19 +58,8 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let progress = if stderr().is_tty() {
-        ProgressBar::new_spinner().with_style(
-            ProgressStyle::with_template(
-                "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",
-            )
-            .unwrap(),
-        )
-    } else {
-        ProgressBar::hidden()
-    };
-
-    let mut source = FfmpegDecoder::new(source).unwrap();
-    let mut distorted = FfmpegDecoder::new(distorted).unwrap();
+    let source = FfmpegDecoder::new(source).unwrap();
+    let distorted = FfmpegDecoder::new(distorted).unwrap();
 
     if src_matrix == MatrixCoefficients::Unspecified {
         src_matrix = guess_matrix_coefficients(
@@ -105,69 +123,68 @@ pub fn compare_videos(
         color_primaries: dst_primaries,
     };
 
-    let mut results = Vec::new();
-    let mut frame = 0usize;
-    loop {
-        let (src_rgb, dst_rgb) = match (source.get_bit_depth(), distorted.get_bit_depth()) {
-            (8, 8) => {
-                let src_frame = source.read_video_frame::<u8>();
-                let dst_frame = distorted.read_video_frame::<u8>();
-                if let (Some(src_frame), Some(dst_frame)) = (src_frame, dst_frame) {
-                    let src = Yuv::new(src_frame, src_config).unwrap();
-                    let dst = Yuv::new(dst_frame, dst_config).unwrap();
-                    (Rgb::try_from(src).unwrap(), Rgb::try_from(dst).unwrap())
-                } else {
-                    break;
-                }
-            }
-            (8, _) => {
-                let src_frame = source.read_video_frame::<u8>();
-                let dst_frame = distorted.read_video_frame::<u16>();
-                if let (Some(src_frame), Some(dst_frame)) = (src_frame, dst_frame) {
-                    let src = Yuv::new(src_frame, src_config).unwrap();
-                    let dst = Yuv::new(dst_frame, dst_config).unwrap();
-                    (Rgb::try_from(src).unwrap(), Rgb::try_from(dst).unwrap())
-                } else {
-                    break;
-                }
-            }
-            (_, 8) => {
-                let src_frame = source.read_video_frame::<u16>();
-                let dst_frame = distorted.read_video_frame::<u8>();
-                if let (Some(src_frame), Some(dst_frame)) = (src_frame, dst_frame) {
-                    let src = Yuv::new(src_frame, src_config).unwrap();
-                    let dst = Yuv::new(dst_frame, dst_config).unwrap();
-                    (Rgb::try_from(src).unwrap(), Rgb::try_from(dst).unwrap())
-                } else {
-                    break;
-                }
-            }
-            (_, _) => {
-                let src_frame = source.read_video_frame::<u16>();
-                let dst_frame = distorted.read_video_frame::<u16>();
-                if let (Some(src_frame), Some(dst_frame)) = (src_frame, dst_frame) {
-                    let src = Yuv::new(src_frame, src_config).unwrap();
-                    let dst = Yuv::new(dst_frame, dst_config).unwrap();
-                    (Rgb::try_from(src).unwrap(), Rgb::try_from(dst).unwrap())
-                } else {
-                    break;
-                }
-            }
-        };
+    let (result_tx, result_rx) = mpsc::channel();
+    let src_bd = source.get_bit_depth();
+    let dst_bd = distorted.get_bit_depth();
 
-        let result =
-            compute_frame_ssimulacra2(src_rgb, dst_rgb).expect("Failed to calculate ssimulacra2");
+    let current_frame = 0usize;
+    let decoders = Arc::new(Mutex::new((current_frame, (source, distorted))));
+    for _ in 0..frame_threads {
+        let decoders = Arc::clone(&decoders);
+        let result_tx = result_tx.clone();
+
+        std::thread::spawn(move || {
+            loop {
+                let score = match (src_bd, dst_bd) {
+                    (8, 8) => calc_score::<u8, u8>(&decoders, &src_config, &dst_config),
+                    (8, _) => calc_score::<u8, u16>(&decoders, &src_config, &dst_config),
+                    (_, 8) => calc_score::<u16, u8>(&decoders, &src_config, &dst_config),
+                    (_, _) => calc_score::<u16, u16>(&decoders, &src_config, &dst_config),
+                };
+
+                if let Some(result) = score {
+                    result_tx.send(result).unwrap();
+                } else {
+                    // no score = no more frames to read
+                    break;
+                }
+            }
+        });
+    }
+
+    // Needs to be dropped or the main thread never stops waiting for scores
+    drop(result_tx);
+
+    let progress = if stderr().is_tty() {
+        ProgressBar::new_spinner().with_style(
+            ProgressStyle::with_template(
+                "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",
+            )
+            .unwrap()
+            .with_key("per_sec", |s: &ProgressState, w: &mut dyn std::fmt::Write|
+                write!(w, "{:5.02} fps", s.per_sec()).unwrap()
+            )
+        )
+    } else {
+        ProgressBar::hidden()
+    };
+
+    let mut results = BTreeMap::new();
+    for score in result_rx {
         if verbose {
-            println!("Frame {frame}: {result:.8}");
+            println!("Frame {}: {:.8}", score.0, score.1);
         }
-        results.push(result);
-        frame += 1;
+
+        results.insert(score.0, score.1);
         progress.inc(1);
     }
 
     progress.finish();
+
+    let results: Vec<f64> = results.into_values().collect();
+    let frames = results.len();
     let mut data = Data::new(results.clone());
-    println!("Video Score for {} frames", frame);
+    println!("Video Score for {} frames", frames);
     println!("Mean: {:.8}", data.mean().unwrap());
     println!("Median: {:.8}", data.median());
     println!("Std Dev: {:.8}", data.std_dev().unwrap());
@@ -196,7 +213,7 @@ pub fn compare_videos(
                 .set_label_area_size(LabelAreaPosition::Left, 60)
                 .set_label_area_size(LabelAreaPosition::Bottom, 60)
                 .caption("SSIMULACRA2", ("sans-serif", 50.0))
-                .build_cartesian_2d(0..frame, 0f32..100f32)
+                .build_cartesian_2d(0..frames, 0f32..100f32)
                 .unwrap();
             chart
                 .configure_mesh()
