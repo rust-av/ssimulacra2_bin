@@ -33,12 +33,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
-
-[[package]]
 name = "as-slice"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -198,9 +192,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.23"
+version = "4.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eb41c13df48950b20eb4cd0eefa618819469df1bffc49d11e8487c4ba0037e5"
+checksum = "2148adefda54e14492fb9bddcc600b4344c5d1a3123bd666dcb939c6f0e0e57e"
 dependencies = [
  "atty",
  "bitflags",
@@ -500,7 +494,8 @@ dependencies = [
 [[package]]
 name = "ffmpeg-next"
 version = "5.1.1"
-source = "git+https://github.com/FreezyLemon/rust-ffmpeg?branch=non-exhaustive-enum#d6aa5a328ee0d163bdd69d5af0dbf3fc0a9fdd1a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a80971eee67be0079a1c8890bde68226fe9bd0441740fd6ddd0cee131486b321"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-next",
@@ -510,7 +505,8 @@ dependencies = [
 [[package]]
 name = "ffmpeg-sys-next"
 version = "5.1.1"
-source = "git+https://github.com/FreezyLemon/rust-ffmpeg-sys?branch=non-exhaustive-enum#472f8efa4c4def167dca1c2b02fa70597ef49a6e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d780b36e092254367e2f1f21191992735c8e23f31a5a5a8678db3a79f775021f"
 dependencies = [
  "bindgen",
  "cc",
@@ -878,9 +874,9 @@ dependencies = [
 
 [[package]]
 name = "nalgebra"
-version = "0.31.3"
+version = "0.31.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eef2ccf9aefdae3334ad5911b5414724b9047bfe145b3353d5878732cc7b86b"
+checksum = "20bd243ab3dbb395b39ee730402d2e5405e448c75133ec49cc977762c4cba3d1"
 dependencies = [
  "approx",
  "matrixmultiply",
@@ -1482,22 +1478,22 @@ dependencies = [
 
 [[package]]
 name = "ssimulacra2"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88af54c948ea41edce0ec14a32cf2282331f7714178a0f216b7bbec640a9e9b"
+checksum = "d84567d6e0b4a65831cf3cd375fa9618421678f94aa398f6294e3416cdd167cd"
 dependencies = [
  "aligned",
  "anyhow",
- "arrayref",
- "nalgebra 0.31.3",
+ "nalgebra 0.31.4",
  "num-traits",
+ "rayon",
  "wide",
  "yuvxyb",
 ]
 
 [[package]]
 name = "ssimulacra2_rs"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "av-metrics-decoders",
  "clap",
@@ -1870,14 +1866,14 @@ dependencies = [
 
 [[package]]
 name = "yuvxyb"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05318dd8480802e1b69ecb4d18483c0f4c0ddbaebe31e5e7296cc0beff11acc7"
+checksum = "effd4cc8bf653b1f5352909ba73777b73e531d15add88ae09c4a922000e3e59b"
 dependencies = [
  "anyhow",
  "av-data",
  "log",
- "nalgebra 0.31.3",
+ "nalgebra 0.31.4",
  "new_debug_unreachable",
  "num-traits",
  "paste",
