@@ -1,6 +1,6 @@
 [package]
 name = "ssimulacra2_rs"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"
@@ -24,7 +24,7 @@ plotters = { version = "0.3.4", default-features = false, features = [
     "bitmap_backend",
     "area_series",
 ], optional = true }
-ssimulacra2 = "0.2.0"
+ssimulacra2 = "0.3.0"
 statrs = { version = "0.16.0", optional = true }
 
 [profile.release]

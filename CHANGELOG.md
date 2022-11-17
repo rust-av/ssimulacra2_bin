@@ -1,3 +1,9 @@
+## Version 0.3.4
+
+- Add `--frame-threads` argument to support frame parallel multithreading
+  - This is set to 1 by default because it does linearly increase memory usage
+- Various performance improvements
+
 ## Version 0.3.3
 
 - Fix graphing
