@@ -494,8 +494,7 @@ dependencies = [
 [[package]]
 name = "ffmpeg-next"
 version = "5.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a80971eee67be0079a1c8890bde68226fe9bd0441740fd6ddd0cee131486b321"
+source = "git+https://github.com/FreezyLemon/rust-ffmpeg?branch=non-exhaustive-enum#d6aa5a328ee0d163bdd69d5af0dbf3fc0a9fdd1a"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-next",
@@ -505,8 +504,7 @@ dependencies = [
 [[package]]
 name = "ffmpeg-sys-next"
 version = "5.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d780b36e092254367e2f1f21191992735c8e23f31a5a5a8678db3a79f775021f"
+source = "git+https://github.com/FreezyLemon/rust-ffmpeg-sys?branch=non-exhaustive-enum#472f8efa4c4def167dca1c2b02fa70597ef49a6e"
 dependencies = [
  "bindgen",
  "cc",
@@ -1495,6 +1493,7 @@ dependencies = [
 name = "ssimulacra2_rs"
 version = "0.3.4"
 dependencies = [
+ "anyhow",
  "av-metrics-decoders",
  "clap",
  "crossterm",

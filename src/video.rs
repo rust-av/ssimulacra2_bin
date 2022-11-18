@@ -1,34 +1,136 @@
+use anyhow::Result;
 use av_metrics_decoders::{Decoder, FfmpegDecoder, Pixel};
 use crossterm::tty::IsTty;
 use image::ColorType;
-use indicatif::{ProgressBar, ProgressStyle, ProgressState};
+use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
-    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic,
-    Yuv, YuvConfig,
+    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic, Yuv,
+    YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
 use std::collections::BTreeMap;
 use std::io::stderr;
-use std::sync::{Mutex, Arc, mpsc};
+use std::process::Command;
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
 use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 
-fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDecoder))>, src_yuvcfg: &YuvConfig, dst_yuvcfg: &YuvConfig) -> Option<(usize, f64)> {
+const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
+const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
+    // Do not use a spinner on Windows since the default console cannot display
+    // the characters used for the spinner
+    "{elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
+} else {
+    "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
+};
+const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
+    // Do not use a spinner on Windows since the default console cannot display
+    // the characters used for the spinner
+    "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
+} else {
+    "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
+};
+
+fn pretty_progress_style() -> ProgressStyle {
+    ProgressStyle::default_bar()
+        .template(INDICATIF_PROGRESS_TEMPLATE)
+        .unwrap()
+        .with_key(
+            "fps",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+                    write!(w, "0 fps").unwrap();
+                } else {
+                    let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
+                    if fps < 1.0 {
+                        write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
+                    } else {
+                        write!(w, "{:.2} fps", fps).unwrap();
+                    }
+                }
+            },
+        )
+        .with_key(
+            "fixed_eta",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+                    write!(w, "unknown").unwrap();
+                } else {
+                    let spf = state.elapsed().as_secs_f32() / state.pos() as f32;
+                    let remaining = state.len().unwrap_or(0) - state.pos();
+                    write!(
+                        w,
+                        "{:#}",
+                        HumanDuration(Duration::from_secs_f32(spf * remaining as f32))
+                    )
+                    .unwrap();
+                }
+            },
+        )
+        .with_key(
+            "pos",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                write!(w, "{}/{}", state.pos(), state.len().unwrap_or(0)).unwrap();
+            },
+        )
+        .with_key(
+            "percent",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                write!(w, "{:>3.0}%", state.fraction() * 100_f32).unwrap();
+            },
+        )
+        .progress_chars(PROGRESS_CHARS)
+}
+
+fn spinner_style() -> ProgressStyle {
+    ProgressStyle::default_spinner()
+        .template(INDICATIF_SPINNER_TEMPLATE)
+        .unwrap()
+        .with_key(
+            "fps",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+                    write!(w, "0 fps").unwrap();
+                } else {
+                    let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
+                    if fps < 1.0 {
+                        write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
+                    } else {
+                        write!(w, "{:.2} fps", fps).unwrap();
+                    }
+                }
+            },
+        )
+        .with_key(
+            "pos",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                write!(w, "{}", state.pos()).unwrap();
+            },
+        )
+        .progress_chars(PROGRESS_CHARS)
+}
+
+fn calc_score<S: Pixel, D: Pixel>(
+    mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDecoder))>,
+    src_yuvcfg: &YuvConfig,
+    dst_yuvcfg: &YuvConfig,
+) -> Option<(usize, f64)> {
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
         let curr_frame = guard.0;
-        
-        let src_frame = guard.1.0.read_video_frame::<S>();
-        let dst_frame = guard.1.1.read_video_frame::<D>();
-        
+
+        let src_frame = guard.1 .0.read_video_frame::<S>();
+        let dst_frame = guard.1 .1.read_video_frame::<D>();
+
         if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
             guard.0 += 1;
             (curr_frame, (sf, df))
         } else {
-            return None
+            return None;
         }
     };
 
@@ -37,8 +139,7 @@ fn calc_score<S: Pixel, D: Pixel>(mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDeco
 
     Some((
         frame_idx,
-        compute_frame_ssimulacra2(src_yuv, dst_yuv)
-            .expect("Failed to calculate ssimulacra2")
+        compute_frame_ssimulacra2(src_yuv, dst_yuv).expect("Failed to calculate ssimulacra2"),
     ))
 }
 
@@ -58,6 +159,7 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
+    let frame_count = get_frame_count(source).ok();
     let source = FfmpegDecoder::new(source).unwrap();
     let distorted = FfmpegDecoder::new(distorted).unwrap();
 
@@ -156,15 +258,17 @@ pub fn compare_videos(
     drop(result_tx);
 
     let progress = if stderr().is_tty() {
-        ProgressBar::new_spinner().with_style(
-            ProgressStyle::with_template(
-                "[{elapsed_precise:.blue}] [{per_sec:.green}] Frame {pos}",
-            )
-            .unwrap()
-            .with_key("per_sec", |s: &ProgressState, w: &mut dyn std::fmt::Write|
-                write!(w, "{:5.02} fps", s.per_sec()).unwrap()
-            )
-        )
+        let pb = frame_count.map_or_else(
+            || ProgressBar::new(0).with_style(spinner_style()),
+            |frame_count| ProgressBar::new(frame_count as u64).with_style(pretty_progress_style()),
+        );
+        pb.set_draw_target(ProgressDrawTarget::stderr());
+        pb.enable_steady_tick(Duration::from_millis(100));
+        pb.reset();
+        pb.reset_eta();
+        pb.reset_elapsed();
+        pb.set_position(0);
+        pb
     } else {
         ProgressBar::hidden()
     };
@@ -368,4 +472,25 @@ pub fn guess_color_primaries(
     } else {
         ColorPrimaries::BT709
     }
+}
+
+fn get_frame_count(video: &Path) -> Result<usize> {
+    // Would it be better to use the ffmpeg API for this? Yes.
+    // But it would also be an outrageous pain in the rear,
+    // when I can use the command line by copy and pasting
+    // one command from StackOverflow.
+    let result = Command::new("ffprobe")
+        .arg("-v")
+        .arg("error")
+        .arg("-select_streams")
+        .arg("v:0")
+        .arg("-count_packets")
+        .arg("-show_entries")
+        .arg("stream=nb_read_packets")
+        .arg("-of")
+        .arg("csv=p=0")
+        .arg(video)
+        .output()?;
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    Ok(stdout.trim().parse()?)
 }
