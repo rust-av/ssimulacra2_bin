@@ -11,6 +11,7 @@ rust-version = "1.61"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.55"
 av-metrics-decoders = { version = "0.1.9", features = [
     "ffmpeg",
 ], optional = true }
