@@ -257,7 +257,7 @@ pub fn compare_videos(
     // Needs to be dropped or the main thread never stops waiting for scores
     drop(result_tx);
 
-    let progress = if stderr().is_tty() {
+    let progress = if stderr().is_tty() && !verbose {
         let pb = frame_count.map_or_else(
             || ProgressBar::new(0).with_style(spinner_style()),
             |frame_count| ProgressBar::new(frame_count as u64).with_style(pretty_progress_style()),
