@@ -1,23 +1,22 @@
-use anyhow::Result;
-use av_metrics_decoders::{Decoder, FfmpegDecoder, Pixel};
 use crossterm::tty::IsTty;
 use image::ColorType;
 use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use num_traits::FromPrimitive;
 use ssimulacra2::{
-    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, TransferCharacteristic, Yuv,
-    YuvConfig,
+    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Pixel, TransferCharacteristic,
+    Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
 use std::collections::BTreeMap;
 use std::io::stderr;
-use std::process::Command;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+use crate::vapoursynth::VapoursynthDecoder;
 
 const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
@@ -26,13 +25,6 @@ const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
     "{elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
 } else {
     "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
-};
-const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
-    // Do not use a spinner on Windows since the default console cannot display
-    // the characters used for the spinner
-    "{elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
-} else {
-    "{spinner:.green.bold} {elapsed_precise:.bold} [{wide_bar:.blue/white.dim}]  {pos} frames ({fps:.bold})"
 };
 
 fn pretty_progress_style() -> ProgressStyle {
@@ -86,36 +78,8 @@ fn pretty_progress_style() -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
 }
 
-fn spinner_style() -> ProgressStyle {
-    ProgressStyle::default_spinner()
-        .template(INDICATIF_SPINNER_TEMPLATE)
-        .unwrap()
-        .with_key(
-            "fps",
-            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
-                    write!(w, "0 fps").unwrap();
-                } else {
-                    let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
-                    if fps < 1.0 {
-                        write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
-                    } else {
-                        write!(w, "{:.2} fps", fps).unwrap();
-                    }
-                }
-            },
-        )
-        .with_key(
-            "pos",
-            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
-                write!(w, "{}", state.pos()).unwrap();
-            },
-        )
-        .progress_chars(PROGRESS_CHARS)
-}
-
 fn calc_score<S: Pixel, D: Pixel>(
-    mtx: &Mutex<(usize, (FfmpegDecoder, FfmpegDecoder))>,
+    mtx: &Mutex<(usize, (VapoursynthDecoder, VapoursynthDecoder))>,
     src_yuvcfg: &YuvConfig,
     dst_yuvcfg: &YuvConfig,
 ) -> Option<(usize, f64)> {
@@ -126,7 +90,7 @@ fn calc_score<S: Pixel, D: Pixel>(
         let src_frame = guard.1 .0.read_video_frame::<S>();
         let dst_frame = guard.1 .1.read_video_frame::<D>();
 
-        if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
+        if let (Ok(sf), Ok(df)) = (src_frame, dst_frame) {
             guard.0 += 1;
             (curr_frame, (sf, df))
         } else {
@@ -159,21 +123,23 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let frame_count = get_frame_count(source).ok();
-    let source = FfmpegDecoder::new(source).unwrap();
-    let distorted = FfmpegDecoder::new(distorted).unwrap();
+    let source = VapoursynthDecoder::new(source).unwrap();
+    let distorted = VapoursynthDecoder::new(distorted).unwrap();
 
+    let source_frame_count = source.get_frame_count().unwrap();
+    let distorted_frame_count = distorted.get_frame_count().unwrap();
+    if source_frame_count != distorted_frame_count {
+        eprintln!("WARNING: Frame count mismatch detected, scores may be inaccurate");
+    }
+
+    let source_resolution = source.get_resolution().unwrap();
+    let distorted_resolution = distorted.get_resolution().unwrap();
     if src_matrix == MatrixCoefficients::Unspecified {
-        src_matrix = guess_matrix_coefficients(
-            source.get_video_details().width,
-            source.get_video_details().height,
-        );
+        src_matrix = guess_matrix_coefficients(source_resolution.width, source_resolution.height);
     }
     if dst_matrix == MatrixCoefficients::Unspecified {
-        dst_matrix = guess_matrix_coefficients(
-            distorted.get_video_details().width,
-            distorted.get_video_details().height,
-        );
+        dst_matrix =
+            guess_matrix_coefficients(distorted_resolution.width, distorted_resolution.height);
     }
     if src_transfer == TransferCharacteristic::Unspecified {
         src_transfer = TransferCharacteristic::BT1886;
@@ -184,41 +150,33 @@ pub fn compare_videos(
     if src_primaries == ColorPrimaries::Unspecified {
         src_primaries = guess_color_primaries(
             src_matrix,
-            source.get_video_details().width,
-            source.get_video_details().height,
+            source_resolution.width,
+            source_resolution.height,
         );
     }
     if dst_primaries == ColorPrimaries::Unspecified {
         dst_primaries = guess_color_primaries(
             dst_matrix,
-            distorted.get_video_details().width,
-            distorted.get_video_details().height,
+            distorted_resolution.width,
+            distorted_resolution.height,
         );
     }
 
-    let src_dec = source
-        .get_video_details()
-        .chroma_sampling
-        .get_decimation()
-        .unwrap_or((0, 0));
+    let source_format = source.get_format().unwrap();
+    let distorted_format = distorted.get_format().unwrap();
     let src_config = YuvConfig {
-        bit_depth: source.get_bit_depth() as u8,
-        subsampling_x: src_dec.0 as u8,
-        subsampling_y: src_dec.1 as u8,
+        bit_depth: source_format.bits_per_sample(),
+        subsampling_x: source_format.sub_sampling_w(),
+        subsampling_y: source_format.sub_sampling_h(),
         full_range: src_full_range,
         matrix_coefficients: src_matrix,
         transfer_characteristics: src_transfer,
         color_primaries: src_primaries,
     };
-    let dst_dec = distorted
-        .get_video_details()
-        .chroma_sampling
-        .get_decimation()
-        .unwrap_or((0, 0));
     let dst_config = YuvConfig {
-        bit_depth: distorted.get_bit_depth() as u8,
-        subsampling_x: dst_dec.0 as u8,
-        subsampling_y: dst_dec.1 as u8,
+        bit_depth: distorted_format.bits_per_sample(),
+        subsampling_x: distorted_format.sub_sampling_w(),
+        subsampling_y: distorted_format.sub_sampling_h(),
         full_range: dst_full_range,
         matrix_coefficients: dst_matrix,
         transfer_characteristics: dst_transfer,
@@ -226,8 +184,8 @@ pub fn compare_videos(
     };
 
     let (result_tx, result_rx) = mpsc::channel();
-    let src_bd = source.get_bit_depth();
-    let dst_bd = distorted.get_bit_depth();
+    let src_bd = src_config.bit_depth;
+    let dst_bd = dst_config.bit_depth;
 
     let current_frame = 0usize;
     let decoders = Arc::new(Mutex::new((current_frame, (source, distorted))));
@@ -258,10 +216,7 @@ pub fn compare_videos(
     drop(result_tx);
 
     let progress = if stderr().is_tty() && !verbose {
-        let pb = frame_count.map_or_else(
-            || ProgressBar::new(0).with_style(spinner_style()),
-            |frame_count| ProgressBar::new(frame_count as u64).with_style(pretty_progress_style()),
-        );
+        let pb = ProgressBar::new(source_frame_count as u64).with_style(pretty_progress_style());
         pb.set_draw_target(ProgressDrawTarget::stderr());
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.reset();
@@ -472,25 +427,4 @@ pub fn guess_color_primaries(
     } else {
         ColorPrimaries::BT709
     }
-}
-
-fn get_frame_count(video: &Path) -> Result<usize> {
-    // Would it be better to use the ffmpeg API for this? Yes.
-    // But it would also be an outrageous pain in the rear,
-    // when I can use the command line by copy and pasting
-    // one command from StackOverflow.
-    let result = Command::new("ffprobe")
-        .arg("-v")
-        .arg("error")
-        .arg("-select_streams")
-        .arg("v:0")
-        .arg("-count_packets")
-        .arg("-show_entries")
-        .arg("stream=nb_read_packets")
-        .arg("-of")
-        .arg("csv=p=0")
-        .arg(video)
-        .output()?;
-    let stdout = String::from_utf8_lossy(&result.stdout);
-    Ok(stdout.trim().parse()?)
 }

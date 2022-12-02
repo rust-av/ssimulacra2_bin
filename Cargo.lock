@@ -494,7 +494,8 @@ dependencies = [
 [[package]]
 name = "ffmpeg-next"
 version = "5.1.1"
-source = "git+https://github.com/FreezyLemon/rust-ffmpeg?branch=non-exhaustive-enum#d6aa5a328ee0d163bdd69d5af0dbf3fc0a9fdd1a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a80971eee67be0079a1c8890bde68226fe9bd0441740fd6ddd0cee131486b321"
 dependencies = [
  "bitflags",
  "ffmpeg-sys-next",
@@ -504,7 +505,8 @@ dependencies = [
 [[package]]
 name = "ffmpeg-sys-next"
 version = "5.1.1"
-source = "git+https://github.com/FreezyLemon/rust-ffmpeg-sys?branch=non-exhaustive-enum#472f8efa4c4def167dca1c2b02fa70597ef49a6e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d780b36e092254367e2f1f21191992735c8e23f31a5a5a8678db3a79f775021f"
 dependencies = [
  "bindgen",
  "cc",
@@ -1497,13 +1499,14 @@ dependencies = [
  "av-metrics-decoders",
  "clap",
  "crossterm",
- "ffmpeg-next",
  "image",
  "indicatif",
  "num-traits",
  "plotters",
  "ssimulacra2",
  "statrs",
+ "v_frame",
+ "vapoursynth",
 ]
 
 [[package]]
@@ -1643,6 +1646,28 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rust_hawktracer",
+]
+
+[[package]]
+name = "vapoursynth"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c7df702c65dec1cfa3b93f824a1e58d5b0fdb82ac8a722596f43d7214282f56"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "lazy_static",
+ "thiserror",
+ "vapoursynth-sys",
+]
+
+[[package]]
+name = "vapoursynth-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fc59bbb7980ce21ece45bc5b3e316bf27ac164b7b1c273ce4846c29d0642a9c"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]

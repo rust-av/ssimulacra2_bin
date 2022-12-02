@@ -1,10 +1,12 @@
-#[cfg(feature = "ffmpeg")]
+#[cfg(feature = "video")]
+mod vapoursynth;
+#[cfg(feature = "video")]
 mod video;
 
-#[cfg(feature = "ffmpeg")]
+#[cfg(feature = "video")]
 use self::video::*;
 use clap::{Parser, Subcommand};
-#[cfg(feature = "ffmpeg")]
+#[cfg(feature = "video")]
 use ssimulacra2::MatrixCoefficients;
 use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, Rgb, TransferCharacteristic, Xyb};
 use std::path::{Path, PathBuf};
@@ -30,7 +32,7 @@ enum Commands {
         distorted: PathBuf,
     },
     /// Compare two videos. Resolutions and frame counts must be identical.
-    #[cfg(feature = "ffmpeg")]
+    #[cfg(feature = "video")]
     Video {
         /// Source video
         #[arg(help = "Original unmodified video", value_hint = clap::ValueHint::FilePath)]
@@ -90,7 +92,7 @@ enum Commands {
 fn main() {
     match Cli::parse().command {
         Commands::Image { source, distorted } => compare_images(&source, &distorted),
-        #[cfg(feature = "ffmpeg")]
+        #[cfg(feature = "video")]
         Commands::Video {
             source,
             distorted,
