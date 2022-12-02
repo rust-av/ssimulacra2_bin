@@ -12,8 +12,8 @@ rust-version = "1.61"
 
 [dependencies]
 anyhow = "1.0.55"
-av-metrics-decoders = { version = "0.1.9", features = [
-    "ffmpeg",
+av-metrics-decoders = { version = "0.2.1", features = [
+    "vapoursynth",
 ], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.25.0"
@@ -26,13 +26,6 @@ plotters = { version = "0.3.4", default-features = false, features = [
 ], optional = true }
 ssimulacra2 = "0.3.0"
 statrs = { version = "0.16.0", optional = true }
-vapoursynth = { version = "0.4.0", features = [
-    "vsscript-functions",
-    "vapoursynth-functions",
-    "vapoursynth-api-36",
-    "vsscript-api-32",
-], optional = true }
-v_frame = { version = "0.3.1", optional = true }
 
 [profile.release]
 lto = "thin"
@@ -40,4 +33,4 @@ codegen-units = 1
 
 [features]
 default = ["video"]
-video = ["plotters", "statrs", "num-traits", "vapoursynth", "v_frame"]
+video = ["av-metrics-decoders", "plotters", "statrs", "num-traits"]

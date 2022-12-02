@@ -1,3 +1,4 @@
+use av_metrics_decoders::{Decoder, VapoursynthDecoder};
 use crossterm::tty::IsTty;
 use image::ColorType;
 use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
@@ -15,8 +16,6 @@ use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
-
-use crate::vapoursynth::VapoursynthDecoder;
 
 const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
@@ -90,7 +89,7 @@ fn calc_score<S: Pixel, D: Pixel>(
         let src_frame = guard.1 .0.read_video_frame::<S>();
         let dst_frame = guard.1 .1.read_video_frame::<D>();
 
-        if let (Ok(sf), Ok(df)) = (src_frame, dst_frame) {
+        if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
             guard.0 += 1;
             (curr_frame, (sf, df))
         } else {
@@ -123,8 +122,24 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let source = VapoursynthDecoder::new(source).unwrap();
-    let distorted = VapoursynthDecoder::new(distorted).unwrap();
+    let source = if source
+        .extension()
+        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+        .unwrap_or(false)
+    {
+        VapoursynthDecoder::new_from_script(source).unwrap()
+    } else {
+        VapoursynthDecoder::new_from_video(source).unwrap()
+    };
+    let distorted = if distorted
+        .extension()
+        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+        .unwrap_or(false)
+    {
+        VapoursynthDecoder::new_from_script(distorted).unwrap()
+    } else {
+        VapoursynthDecoder::new_from_video(distorted).unwrap()
+    };
 
     let source_frame_count = source.get_frame_count().unwrap();
     let distorted_frame_count = distorted.get_frame_count().unwrap();
@@ -132,14 +147,13 @@ pub fn compare_videos(
         eprintln!("WARNING: Frame count mismatch detected, scores may be inaccurate");
     }
 
-    let source_resolution = source.get_resolution().unwrap();
-    let distorted_resolution = distorted.get_resolution().unwrap();
+    let source_info = source.get_video_details();
+    let distorted_info = distorted.get_video_details();
     if src_matrix == MatrixCoefficients::Unspecified {
-        src_matrix = guess_matrix_coefficients(source_resolution.width, source_resolution.height);
+        src_matrix = guess_matrix_coefficients(source_info.width, source_info.height);
     }
     if dst_matrix == MatrixCoefficients::Unspecified {
-        dst_matrix =
-            guess_matrix_coefficients(distorted_resolution.width, distorted_resolution.height);
+        dst_matrix = guess_matrix_coefficients(distorted_info.width, distorted_info.height);
     }
     if src_transfer == TransferCharacteristic::Unspecified {
         src_transfer = TransferCharacteristic::BT1886;
@@ -148,35 +162,34 @@ pub fn compare_videos(
         dst_transfer = TransferCharacteristic::BT1886;
     }
     if src_primaries == ColorPrimaries::Unspecified {
-        src_primaries = guess_color_primaries(
-            src_matrix,
-            source_resolution.width,
-            source_resolution.height,
-        );
+        src_primaries = guess_color_primaries(src_matrix, source_info.width, source_info.height);
     }
     if dst_primaries == ColorPrimaries::Unspecified {
-        dst_primaries = guess_color_primaries(
-            dst_matrix,
-            distorted_resolution.width,
-            distorted_resolution.height,
-        );
+        dst_primaries =
+            guess_color_primaries(dst_matrix, distorted_info.width, distorted_info.height);
     }
 
-    let source_format = source.get_format().unwrap();
-    let distorted_format = distorted.get_format().unwrap();
+    let src_ss = source_info
+        .chroma_sampling
+        .get_decimation()
+        .unwrap_or((0, 0));
+    let dist_ss = distorted_info
+        .chroma_sampling
+        .get_decimation()
+        .unwrap_or((0, 0));
     let src_config = YuvConfig {
-        bit_depth: source_format.bits_per_sample(),
-        subsampling_x: source_format.sub_sampling_w(),
-        subsampling_y: source_format.sub_sampling_h(),
+        bit_depth: source_info.bit_depth as u8,
+        subsampling_x: src_ss.0 as u8,
+        subsampling_y: src_ss.1 as u8,
         full_range: src_full_range,
         matrix_coefficients: src_matrix,
         transfer_characteristics: src_transfer,
         color_primaries: src_primaries,
     };
     let dst_config = YuvConfig {
-        bit_depth: distorted_format.bits_per_sample(),
-        subsampling_x: distorted_format.sub_sampling_w(),
-        subsampling_y: distorted_format.sub_sampling_h(),
+        bit_depth: distorted_info.bit_depth as u8,
+        subsampling_x: dist_ss.0 as u8,
+        subsampling_y: dist_ss.1 as u8,
         full_range: dst_full_range,
         matrix_coefficients: dst_matrix,
         transfer_characteristics: dst_transfer,

@@ -1,6 +1,4 @@
 #[cfg(feature = "video")]
-mod vapoursynth;
-#[cfg(feature = "video")]
 mod video;
 
 #[cfg(feature = "video")]
