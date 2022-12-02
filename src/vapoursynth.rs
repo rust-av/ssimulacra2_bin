@@ -23,7 +23,11 @@ core = vs.core
 clip = core.lsmas.LWLibavSource(source="{}")
 clip.set_output(0)
         "#,
-            filename.canonicalize().unwrap().to_string_lossy()
+            filename
+                .canonicalize()
+                .unwrap()
+                .to_string_lossy()
+                .trim_start_matches(r"\\?\")
         );
         let env = Environment::from_script(&script)?;
         Ok(Self { env, cur_frame: 0 })
