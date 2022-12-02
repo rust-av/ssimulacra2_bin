@@ -87,7 +87,7 @@ clip.set_output(0)
                         .zip((0..res.height).map(|y| frame.plane_row::<u8>(0, y)))
                     {
                         // SAFETY: We know that `T` is `u8` here.
-                        out_row.copy_from_slice(unsafe { transmute(in_row) });
+                        out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                     }
                     if format.color_family() != ColorFamily::Gray {
                         for (out_row, in_row) in f.planes[1].rows_iter_mut().zip(
@@ -95,7 +95,7 @@ clip.set_output(0)
                                 .map(|y| frame.plane_row::<u8>(1, y)),
                         ) {
                             // SAFETY: We know that `T` is `u8` here.
-                            out_row.copy_from_slice(unsafe { transmute(in_row) });
+                            out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                         }
                     }
                     if format.color_family() != ColorFamily::Gray {
@@ -104,7 +104,7 @@ clip.set_output(0)
                                 .map(|y| frame.plane_row::<u8>(2, y)),
                         ) {
                             // SAFETY: We know that `T` is `u8` here.
-                            out_row.copy_from_slice(unsafe { transmute(in_row) });
+                            out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                         }
                     }
                 }
@@ -114,7 +114,7 @@ clip.set_output(0)
                         .zip((0..res.height).map(|y| frame.plane_row::<u16>(0, y)))
                     {
                         // SAFETY: We know that `T` is `u16` here.
-                        out_row.copy_from_slice(unsafe { transmute(in_row) });
+                        out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                     }
                     if format.color_family() != ColorFamily::Gray {
                         for (out_row, in_row) in f.planes[1].rows_iter_mut().zip(
@@ -122,7 +122,7 @@ clip.set_output(0)
                                 .map(|y| frame.plane_row::<u16>(1, y)),
                         ) {
                             // SAFETY: We know that `T` is `u16` here.
-                            out_row.copy_from_slice(unsafe { transmute(in_row) });
+                            out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                         }
                     }
                     if format.color_family() != ColorFamily::Gray {
@@ -131,7 +131,7 @@ clip.set_output(0)
                                 .map(|y| frame.plane_row::<u16>(2, y)),
                         ) {
                             // SAFETY: We know that `T` is `u16` here.
-                            out_row.copy_from_slice(unsafe { transmute(in_row) });
+                            out_row[..in_row.len()].copy_from_slice(unsafe { transmute(in_row) });
                         }
                     }
                 }
