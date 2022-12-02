@@ -7,12 +7,20 @@ Binary interface to the Rust implementation of the SSIMULACRA2 metric: https://g
 
 ## Required packages for video support:
 
-Ubuntu/Debian:
+### Arch
+
 ```bash
-sudo apt install libavutil-dev libavformat-dev clang
+sudo pacman -S vapoursynth vapoursynth-plugin-lsmashsource # Keep install dependencies
 ```
 
-Arch:
-```bash
-sudo pacman -S ffmpeg # Keep install dependencies
-```
+### Other Linux
+
+See http://www.vapoursynth.com/doc/installation.html#linux-installation
+
+TODO: How to install LSMASHSource?
+
+### Windows
+
+See http://www.vapoursynth.com/doc/installation.html#windows-installation
+
+Then download the latest release-x86_64-cachedir-cwd.zip from https://github.com/AkarinVS/L-SMASH-Works/releases/tag/vA.3j
