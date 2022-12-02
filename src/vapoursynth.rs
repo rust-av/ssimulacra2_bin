@@ -28,6 +28,8 @@ clip.set_output(0)
                 .unwrap()
                 .to_string_lossy()
                 .trim_start_matches(r"\\?\")
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"")
         );
         let env = Environment::from_script(&script)?;
         Ok(Self { env, cur_frame: 0 })
