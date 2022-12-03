@@ -14,17 +14,14 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DEPS: libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev clang libfontconfig-dev
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    container: shssoichiro/av1an-ci:latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Dependencies
-      run: sudo apt-get update && sudo apt-get install -y ${{ env.DEPS }}
     - name: Build
       run: cargo clippy --verbose
     - name: Run tests
