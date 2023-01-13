@@ -10,7 +10,7 @@ Binary interface to the Rust implementation of the SSIMULACRA2 metric: https://g
 ### Arch
 
 ```bash
-sudo pacman -S vapoursynth vapoursynth-plugin-lsmashsource gcc make cmake pkg-config # Keep install dependencies
+sudo pacman -S vapoursynth vapoursynth-plugin-lsmashsource gcc make cmake pkg-config ttf-bitstream-vera # Keep install dependencies
 ```
 
 ### Other Linux
