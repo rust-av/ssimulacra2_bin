@@ -17,7 +17,7 @@ sudo pacman -S vapoursynth vapoursynth-plugin-lsmashsource gcc make cmake pkg-co
 
 See http://www.vapoursynth.com/doc/installation.html#linux-installation
 
-TODO: How to install LSMASHSource?
+Install LSMASHSource from https://github.com/AkarinVS/L-SMASH-Works
 
 ### Windows
 
