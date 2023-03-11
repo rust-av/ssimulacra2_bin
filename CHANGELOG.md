@@ -1,3 +1,7 @@
+## Version 0.3.5
+
+- Minor performance improvements
+
 ## Version 0.3.4
 
 - Add `--frame-threads` argument to support frame parallel multithreading
