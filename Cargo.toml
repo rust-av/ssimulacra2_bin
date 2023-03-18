@@ -10,7 +10,9 @@ rust-version = "1.61"
 
 [dependencies]
 anyhow = "1.0.55"
-av-metrics-decoders = { version = "0.2.1", features = ["vapoursynth"], optional = true }
+av-metrics-decoders = { version = "0.2.1", features = [
+    "vapoursynth",
+], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.26.1"
 indicatif = "0.17.1"
@@ -21,7 +23,7 @@ statrs = { version = "0.16.0", optional = true }
 [dependencies.image]
 version = "0.24.4"
 default-features = false
-features = ["png", "jpeg", "webp"]
+features = ["png", "jpeg", "webp", "hdr", "openexr"]
 
 [dependencies.plotters]
 version = "0.3.4"
