@@ -6,7 +6,7 @@ use self::video::*;
 use clap::{Parser, Subcommand};
 #[cfg(feature = "video")]
 use ssimulacra2::MatrixCoefficients;
-use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, Rgb, TransferCharacteristic, Xyb};
+use ssimulacra2::{compute_frame_ssimulacra2, ColorPrimaries, Rgb, TransferCharacteristic};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
@@ -155,17 +155,14 @@ fn compare_images(source: &Path, distorted: &Path) {
         .map(|chunk| [chunk[0], chunk[1], chunk[2]])
         .collect::<Vec<_>>();
 
-    let source_data = Xyb::try_from(
-        Rgb::new(
-            source_data,
-            source.width() as usize,
-            source.height() as usize,
-            TransferCharacteristic::SRGB,
-            ColorPrimaries::BT709,
-        )
-        .expect("Failed to process source_data into RGB"),
+    let source_data = Rgb::new(
+        source_data,
+        source.width() as usize,
+        source.height() as usize,
+        TransferCharacteristic::SRGB,
+        ColorPrimaries::BT709,
     )
-    .expect("Failed to process source_data into XYB");
+    .expect("Failed to process source_data into RGB");
 
     let distorted_data = distorted
         .to_rgb32f()
@@ -173,17 +170,14 @@ fn compare_images(source: &Path, distorted: &Path) {
         .map(|chunk| [chunk[0], chunk[1], chunk[2]])
         .collect::<Vec<_>>();
 
-    let distorted_data = Xyb::try_from(
-        Rgb::new(
-            distorted_data,
-            distorted.width() as usize,
-            distorted.height() as usize,
-            TransferCharacteristic::SRGB,
-            ColorPrimaries::BT709,
-        )
-        .expect("Failed to process distorted_data into RGB"),
+    let distorted_data = Rgb::new(
+        distorted_data,
+        distorted.width() as usize,
+        distorted.height() as usize,
+        TransferCharacteristic::SRGB,
+        ColorPrimaries::BT709,
     )
-    .expect("Failed to process distorted_data into XYB");
+    .expect("Failed to process distorted_data into RGB");
 
     let result = compute_frame_ssimulacra2(source_data, distorted_data)
         .expect("Failed to calculate ssimulacra2");
