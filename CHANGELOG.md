@@ -1,3 +1,7 @@
+## Version 0.4.0
+
+- Update to [version 2.1 of the metric](https://github.com/cloudinary/ssimulacra2/compare/v2.0...v2.1)
+
 ## Version 0.3.5
 
 - Minor performance improvements

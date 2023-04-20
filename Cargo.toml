@@ -17,7 +17,7 @@ clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.26.1"
 indicatif = "0.17.1"
 num-traits = { version = "0.2.15", optional = true }
-ssimulacra2 = "0.3.1"
+ssimulacra2 = "0.4.0"
 statrs = { version = "0.16.0", optional = true }
 
 [dependencies.image]
