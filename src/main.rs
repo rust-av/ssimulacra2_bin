@@ -34,11 +34,11 @@ enum Commands {
     Video {
         /// Source video
         #[arg(help = "Original unmodified video", value_hint = clap::ValueHint::FilePath)]
-        source: PathBuf,
+        source: String,
 
         /// Distorted video
         #[arg(help = "Distorted video", value_hint = clap::ValueHint::FilePath)]
-        distorted: PathBuf,
+        distorted: String,
 
         /// How many worker threads to use for decoding & calculating scores.
         /// Note: Memory usage increases linearly with the number of workers.

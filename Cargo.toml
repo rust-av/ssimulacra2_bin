@@ -1,6 +1,6 @@
 [package]
 name = "ssimulacra2_rs"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"
@@ -10,8 +10,9 @@ rust-version = "1.61"
 
 [dependencies]
 anyhow = "1.0.55"
-av-metrics-decoders = { version = "0.2.1", features = [
+av-metrics-decoders = { version = "0.3.1", features = [
     "vapoursynth",
+    "y4m",
 ], optional = true }
 clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.26.1"

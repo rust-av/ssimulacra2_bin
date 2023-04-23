@@ -1,4 +1,4 @@
-use av_metrics_decoders::{Decoder, VapoursynthDecoder};
+use av_metrics_decoders::{y4m::new_decoder_from_stdin, Decoder, VapoursynthDecoder};
 use crossterm::tty::IsTty;
 use image::ColorType;
 use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
@@ -24,6 +24,14 @@ const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
     "{elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
 } else {
     "{spinner:.green.bold} {elapsed_precise:.bold} ▕{wide_bar:.blue/white.dim}▏ {percent:.bold}  {pos} ({fps:.bold}, eta {fixed_eta}{msg})"
+};
+
+const INDICATIF_SPINNER_TEMPLATE: &str = if cfg!(windows) {
+    // Do not use a spinner on Windows since the default console cannot display
+    // the characters used for the spinner
+    "{elapsed_precise:.bold} {pos} ({fps:.bold}{msg})"
+} else {
+    "{spinner:.green.bold} {elapsed_precise:.bold} {pos} ({fps:.bold}{msg})"
 };
 
 fn pretty_progress_style() -> ProgressStyle {
@@ -77,8 +85,36 @@ fn pretty_progress_style() -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
 }
 
-fn calc_score<S: Pixel, D: Pixel>(
-    mtx: &Mutex<(usize, (VapoursynthDecoder, VapoursynthDecoder))>,
+fn pretty_spinner_style() -> ProgressStyle {
+    ProgressStyle::default_bar()
+        .template(INDICATIF_SPINNER_TEMPLATE)
+        .unwrap()
+        .with_key(
+            "fps",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                if state.pos() == 0 || state.elapsed().as_secs_f32() < f32::EPSILON {
+                    write!(w, "0 fps").unwrap();
+                } else {
+                    let fps = state.pos() as f32 / state.elapsed().as_secs_f32();
+                    if fps < 1.0 {
+                        write!(w, "{:.2} s/fr", 1.0 / fps).unwrap();
+                    } else {
+                        write!(w, "{:.2} fps", fps).unwrap();
+                    }
+                }
+            },
+        )
+        .with_key(
+            "pos",
+            |state: &ProgressState, w: &mut dyn std::fmt::Write| {
+                write!(w, "{}", state.pos()).unwrap();
+            },
+        )
+        .progress_chars(PROGRESS_CHARS)
+}
+
+fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
+    mtx: &Mutex<(usize, (E, F))>,
     src_yuvcfg: &YuvConfig,
     dst_yuvcfg: &YuvConfig,
 ) -> Option<(usize, f64)> {
@@ -108,8 +144,129 @@ fn calc_score<S: Pixel, D: Pixel>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn compare_videos(
-    source: &Path,
-    distorted: &Path,
+    source: &str,
+    distorted: &str,
+    frame_threads: usize,
+    graph: bool,
+    verbose: bool,
+    src_matrix: MatrixCoefficients,
+    src_transfer: TransferCharacteristic,
+    src_primaries: ColorPrimaries,
+    src_full_range: bool,
+    dst_matrix: MatrixCoefficients,
+    dst_transfer: TransferCharacteristic,
+    dst_primaries: ColorPrimaries,
+    dst_full_range: bool,
+) {
+    if source == "-" || source == "/dev/stdin" {
+        assert!(
+            !(distorted == "-" || distorted == "/dev/stdin"),
+            "Source and distorted inputs cannot both be from piped input"
+        );
+        let distorted = if Path::new(distorted)
+            .extension()
+            .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+            .unwrap_or(false)
+        {
+            VapoursynthDecoder::new_from_script(Path::new(distorted)).unwrap()
+        } else {
+            VapoursynthDecoder::new_from_video(Path::new(distorted)).unwrap()
+        };
+        let distorted_frame_count = distorted.get_frame_count().ok();
+        return compare_videos_inner(
+            new_decoder_from_stdin().unwrap(),
+            distorted,
+            None,
+            distorted_frame_count,
+            frame_threads,
+            graph,
+            verbose,
+            src_matrix,
+            src_transfer,
+            src_primaries,
+            src_full_range,
+            dst_matrix,
+            dst_transfer,
+            dst_primaries,
+            dst_full_range,
+        );
+    }
+
+    if distorted == "-" || distorted == "/dev/stdin" {
+        let source = if Path::new(source)
+            .extension()
+            .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+            .unwrap_or(false)
+        {
+            VapoursynthDecoder::new_from_script(Path::new(source)).unwrap()
+        } else {
+            VapoursynthDecoder::new_from_video(Path::new(source)).unwrap()
+        };
+        let source_frame_count = source.get_frame_count().ok();
+        return compare_videos_inner(
+            source,
+            new_decoder_from_stdin().unwrap(),
+            source_frame_count,
+            None,
+            frame_threads,
+            graph,
+            verbose,
+            src_matrix,
+            src_transfer,
+            src_primaries,
+            src_full_range,
+            dst_matrix,
+            dst_transfer,
+            dst_primaries,
+            dst_full_range,
+        );
+    }
+
+    let source = if Path::new(source)
+        .extension()
+        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+        .unwrap_or(false)
+    {
+        VapoursynthDecoder::new_from_script(Path::new(source)).unwrap()
+    } else {
+        VapoursynthDecoder::new_from_video(Path::new(source)).unwrap()
+    };
+    let distorted = if Path::new(distorted)
+        .extension()
+        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
+        .unwrap_or(false)
+    {
+        VapoursynthDecoder::new_from_script(Path::new(distorted)).unwrap()
+    } else {
+        VapoursynthDecoder::new_from_video(Path::new(distorted)).unwrap()
+    };
+    let source_frame_count = source.get_frame_count().ok();
+    let distorted_frame_count = distorted.get_frame_count().ok();
+    compare_videos_inner(
+        source,
+        distorted,
+        source_frame_count,
+        distorted_frame_count,
+        frame_threads,
+        graph,
+        verbose,
+        src_matrix,
+        src_transfer,
+        src_primaries,
+        src_full_range,
+        dst_matrix,
+        dst_transfer,
+        dst_primaries,
+        dst_full_range,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
+    source: D,
+    distorted: E,
+    source_frame_count: Option<usize>,
+    distorted_frame_count: Option<usize>,
     frame_threads: usize,
     graph: bool,
     verbose: bool,
@@ -122,29 +279,12 @@ pub fn compare_videos(
     mut dst_primaries: ColorPrimaries,
     dst_full_range: bool,
 ) {
-    let source = if source
-        .extension()
-        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
-        .unwrap_or(false)
-    {
-        VapoursynthDecoder::new_from_script(source).unwrap()
-    } else {
-        VapoursynthDecoder::new_from_video(source).unwrap()
-    };
-    let distorted = if distorted
-        .extension()
-        .map(|ext| ext.to_ascii_lowercase().to_string_lossy() == "vpy")
-        .unwrap_or(false)
-    {
-        VapoursynthDecoder::new_from_script(distorted).unwrap()
-    } else {
-        VapoursynthDecoder::new_from_video(distorted).unwrap()
-    };
-
-    let source_frame_count = source.get_frame_count().unwrap();
-    let distorted_frame_count = distorted.get_frame_count().unwrap();
-    if source_frame_count != distorted_frame_count {
-        eprintln!("WARNING: Frame count mismatch detected, scores may be inaccurate");
+    if let Some(source_frame_count) = source_frame_count {
+        if let Some(distorted_frame_count) = distorted_frame_count {
+            if source_frame_count != distorted_frame_count {
+                eprintln!("WARNING: Frame count mismatch detected, scores may be inaccurate");
+            }
+        }
     }
 
     let source_info = source.get_video_details();
@@ -209,10 +349,10 @@ pub fn compare_videos(
         std::thread::spawn(move || {
             loop {
                 let score = match (src_bd, dst_bd) {
-                    (8, 8) => calc_score::<u8, u8>(&decoders, &src_config, &dst_config),
-                    (8, _) => calc_score::<u8, u16>(&decoders, &src_config, &dst_config),
-                    (_, 8) => calc_score::<u16, u8>(&decoders, &src_config, &dst_config),
-                    (_, _) => calc_score::<u16, u16>(&decoders, &src_config, &dst_config),
+                    (8, 8) => calc_score::<u8, u8, _, _>(&decoders, &src_config, &dst_config),
+                    (8, _) => calc_score::<u8, u16, _, _>(&decoders, &src_config, &dst_config),
+                    (_, 8) => calc_score::<u16, u8, _, _>(&decoders, &src_config, &dst_config),
+                    (_, _) => calc_score::<u16, u16, _, _>(&decoders, &src_config, &dst_config),
                 };
 
                 if let Some(result) = score {
@@ -229,7 +369,12 @@ pub fn compare_videos(
     drop(result_tx);
 
     let progress = if stderr().is_tty() && !verbose {
-        let pb = ProgressBar::new(source_frame_count as u64).with_style(pretty_progress_style());
+        let frame_count = source_frame_count.or(distorted_frame_count);
+        let pb = if let Some(frame_count) = frame_count {
+            ProgressBar::new(frame_count as u64).with_style(pretty_progress_style())
+        } else {
+            ProgressBar::new_spinner().with_style(pretty_spinner_style())
+        };
         pb.set_draw_target(ProgressDrawTarget::stderr());
         pb.enable_steady_tick(Duration::from_millis(100));
         pb.reset();
