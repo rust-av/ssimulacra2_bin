@@ -5,6 +5,15 @@
 
 Binary interface to the Rust implementation of the SSIMULACRA2 metric: https://github.com/rust-av/ssimulacra2
 
+## Quality Guidelines
+
+The following is a rough estimate of how ssimulacra2 scores correspond to visual quality.
+
+- 30 = low quality. This corresponds to the p10 worst output of mozjpeg -quality 30.
+- 50 = medium quality. This corresponds to the average output of cjxl -q 40 or mozjpeg -quality 40, or the p10 output of cjxl -q 50 or mozjpeg -quality 60.
+- 70 = high quality. This corresponds to the average output of cjxl -q 65 or mozjpeg -quality 70, p10 output of cjxl -q 75 or mozjpeg -quality 80.
+- 90 = very high quality. Likely impossible to distinguish from the original when viewed at 1:1 from a normal viewing distance. This corresponds to the average output of mozjpeg -quality 95 or the p10 output of cjxl -q 
+
 ## Required packages for video support:
 
 ### Arch
