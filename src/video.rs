@@ -8,6 +8,7 @@ use ssimulacra2::{
     Yuv, YuvConfig,
 };
 use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
+use std::cmp::min;
 use std::collections::BTreeMap;
 use std::io::stderr;
 use std::sync::{mpsc, Arc, Mutex};
@@ -371,7 +372,9 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let progress = if stderr().is_tty() && !verbose {
         let frame_count = source_frame_count.or(distorted_frame_count);
         let pb = if let Some(frame_count) = frame_count {
-            ProgressBar::new(frame_count as u64).with_style(pretty_progress_style())
+            ProgressBar::new(frame_count as u64)
+                .with_style(pretty_progress_style())
+                .with_message(", avg: N/A")
         } else {
             ProgressBar::new_spinner().with_style(pretty_spinner_style())
         };
@@ -387,12 +390,15 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     };
 
     let mut results = BTreeMap::new();
+    let mut avg = 0f64;
     for score in result_rx {
         if verbose {
             println!("Frame {}: {:.8}", score.0, score.1);
         }
 
         results.insert(score.0, score.1);
+        avg = avg + (score.1 - avg) / (min(results.len(), 10) as f64);
+        progress.set_message(format!(", avg: {:.1$}", avg, 2));
         progress.inc(1);
     }
 
