@@ -118,6 +118,8 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
     mtx: &Mutex<(usize, (E, F))>,
     src_yuvcfg: &YuvConfig,
     dst_yuvcfg: &YuvConfig,
+    inc: usize,
+    verbose: bool,
 ) -> Option<(usize, f64)> {
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
@@ -127,7 +129,19 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
         let dst_frame = guard.1 .1.read_video_frame::<D>();
 
         if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
-            guard.0 += 1;
+            // skip remaining frames in increment size
+            for ii in 1..inc {
+                let _src_frame = guard.1 .0.read_video_frame::<S>();
+                let _dst_frame = guard.1 .1.read_video_frame::<D>();
+                if _src_frame.is_none() || _dst_frame.is_none() {
+                    break;
+                }
+                if verbose {
+                    println!("Frame {}: skip", curr_frame + ii);
+                }
+            }
+
+            guard.0 += inc;
             (curr_frame, (sf, df))
         } else {
             return None;
@@ -148,6 +162,7 @@ pub fn compare_videos(
     source: &str,
     distorted: &str,
     frame_threads: usize,
+    inc: usize,
     graph: bool,
     verbose: bool,
     src_matrix: MatrixCoefficients,
@@ -180,6 +195,7 @@ pub fn compare_videos(
             None,
             distorted_frame_count,
             frame_threads,
+            inc,
             graph,
             verbose,
             src_matrix,
@@ -210,6 +226,7 @@ pub fn compare_videos(
             source_frame_count,
             None,
             frame_threads,
+            inc,
             graph,
             verbose,
             src_matrix,
@@ -249,6 +266,7 @@ pub fn compare_videos(
         source_frame_count,
         distorted_frame_count,
         frame_threads,
+        inc,
         graph,
         verbose,
         src_matrix,
@@ -269,6 +287,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     source_frame_count: Option<usize>,
     distorted_frame_count: Option<usize>,
     frame_threads: usize,
+    inc: usize,
     graph: bool,
     verbose: bool,
     mut src_matrix: MatrixCoefficients,
@@ -350,10 +369,10 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
         std::thread::spawn(move || {
             loop {
                 let score = match (src_bd, dst_bd) {
-                    (8, 8) => calc_score::<u8, u8, _, _>(&decoders, &src_config, &dst_config),
-                    (8, _) => calc_score::<u8, u16, _, _>(&decoders, &src_config, &dst_config),
-                    (_, 8) => calc_score::<u16, u8, _, _>(&decoders, &src_config, &dst_config),
-                    (_, _) => calc_score::<u16, u16, _, _>(&decoders, &src_config, &dst_config),
+                    (8, 8) => calc_score::<u8, u8, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
+                    (8, _) => calc_score::<u8, u16, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
+                    (_, 8) => calc_score::<u16, u8, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
+                    (_, _) => calc_score::<u16, u16, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
                 };
 
                 if let Some(result) = score {
@@ -399,7 +418,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
         results.insert(score.0, score.1);
         avg = avg + (score.1 - avg) / (min(results.len(), 10) as f64);
         progress.set_message(format!(", avg: {:.1$}", avg, 2));
-        progress.inc(1);
+        progress.inc(inc.try_into().unwrap());
     }
 
     progress.finish();
