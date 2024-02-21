@@ -45,6 +45,10 @@ enum Commands {
         #[arg(long, short)]
         frame_threads: Option<usize>,
 
+        /// How to increment current frame count; e.g. 10 will read every 10th frame.
+        #[arg(long, short)]
+        increment: Option<usize>,
+
         /// Whether to output a frame-by-frame graph of scores.
         #[arg(long, short)]
         graph: bool,
@@ -95,6 +99,7 @@ fn main() {
             source,
             distorted,
             frame_threads,
+            increment,
             graph,
             verbose,
             src_matrix,
@@ -107,6 +112,7 @@ fn main() {
             dst_full_range,
         } => {
             let frame_threads = frame_threads.unwrap_or(1).max(1);
+            let inc = increment.unwrap_or(1).max(1);
             let src_matrix = src_matrix
                 .map(|i| parse_matrix(&i))
                 .unwrap_or(MatrixCoefficients::Unspecified);
@@ -129,6 +135,7 @@ fn main() {
                 &source,
                 &distorted,
                 frame_threads,
+                inc,
                 graph,
                 verbose,
                 src_matrix,
