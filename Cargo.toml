@@ -6,6 +6,8 @@ description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"
 homepage = "https://github.com/rust-av/ssimulacra2_bin"
 license = "BSD-2-Clause"
+
+# When changing MSRV: Also update .github/workflows/rust.yml
 rust-version = "1.61"
 
 [dependencies]
