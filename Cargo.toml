@@ -8,7 +8,7 @@ homepage = "https://github.com/rust-av/ssimulacra2_bin"
 license = "BSD-2-Clause"
 
 # When changing MSRV: Also update .github/workflows/rust.yml
-rust-version = "1.61"
+rust-version = "1.62"
 
 [dependencies]
 anyhow = "1.0.55"
