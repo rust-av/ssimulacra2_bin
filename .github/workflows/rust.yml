@@ -29,12 +29,12 @@ jobs:
         run: cargo check --locked
 
   build:
-
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo clippy --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo clippy
+      - name: Run tests
+        run: cargo test
+
