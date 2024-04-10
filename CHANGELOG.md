@@ -1,3 +1,10 @@
+## Version 0.5.0
+
+- Bump minimum MSRV to 1.74.1
+- Add rolling average to progress bar
+- Add increment parameter for skipping video frames
+- Bump all dependencies
+
 ## Version 0.4.1
 
 - Add support for piping y4m input from stdin as one of the sources
