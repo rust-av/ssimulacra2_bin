@@ -13,16 +13,28 @@ on:
       - "*.md"
 
 env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-Dwarnings"
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  msrv:
+    runs-on: ubuntu-22.04
+    container: shssoichiro/av1an-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust 1.62.0
+        uses: dtolnay/rust-toolchain@1.62.0
+      - name: Build
+        run: cargo check --locked
 
+  build:
     runs-on: ubuntu-latest
     container: shssoichiro/av1an-ci:latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo clippy --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo clippy
+      - name: Run tests
+        run: cargo test
+
