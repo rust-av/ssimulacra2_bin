@@ -23,8 +23,8 @@ jobs:
     container: shssoichiro/av1an-ci:latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust 1.62.0
-        uses: dtolnay/rust-toolchain@1.62.0
+      - name: Install Rust 1.74.1
+        uses: dtolnay/rust-toolchain@1.74.1
       - name: Build
         run: cargo check --locked
 
@@ -37,4 +37,3 @@ jobs:
         run: cargo clippy
       - name: Run tests
         run: cargo test
-
