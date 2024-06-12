@@ -1,13 +1,3 @@
-use av_metrics_decoders::{y4m::new_decoder_from_stdin, Decoder, VapoursynthDecoder};
-use crossterm::tty::IsTty;
-use image::ColorType;
-use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
-use num_traits::FromPrimitive;
-use ssimulacra2::{
-    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Pixel, TransferCharacteristic,
-    Yuv, YuvConfig,
-};
-use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
 use std::cmp::min;
 use std::collections::BTreeMap;
 use std::io::stderr;
@@ -17,6 +7,17 @@ use std::{
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+use av_metrics_decoders::{y4m::new_decoder_from_stdin, Decoder, VapoursynthDecoder};
+use crossterm::tty::IsTty;
+use image::ColorType;
+use indicatif::{HumanDuration, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
+use num_traits::FromPrimitive;
+use ssimulacra2::{
+    compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Pixel, TransferCharacteristic,
+    Yuv, YuvConfig,
+};
+use statrs::statistics::{Data, Distribution, Median, OrderStatistics, Statistics};
 
 const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
@@ -369,10 +370,34 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
         std::thread::spawn(move || {
             loop {
                 let score = match (src_bd, dst_bd) {
-                    (8, 8) => calc_score::<u8, u8, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
-                    (8, _) => calc_score::<u8, u16, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
-                    (_, 8) => calc_score::<u16, u8, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
-                    (_, _) => calc_score::<u16, u16, _, _>(&decoders, &src_config, &dst_config, inc, verbose),
+                    (8, 8) => calc_score::<u8, u8, _, _>(
+                        &decoders,
+                        &src_config,
+                        &dst_config,
+                        inc,
+                        verbose,
+                    ),
+                    (8, _) => calc_score::<u8, u16, _, _>(
+                        &decoders,
+                        &src_config,
+                        &dst_config,
+                        inc,
+                        verbose,
+                    ),
+                    (_, 8) => calc_score::<u16, u8, _, _>(
+                        &decoders,
+                        &src_config,
+                        &dst_config,
+                        inc,
+                        verbose,
+                    ),
+                    (_, _) => calc_score::<u16, u16, _, _>(
+                        &decoders,
+                        &src_config,
+                        &dst_config,
+                        inc,
+                        verbose,
+                    ),
                 };
 
                 if let Some(result) = score {
