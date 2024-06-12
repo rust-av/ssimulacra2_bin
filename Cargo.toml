@@ -1,6 +1,6 @@
 [package]
 name = "ssimulacra2_rs"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 description = "Binary exposing the ssimulacra2 rust implementation"
 repository = "https://github.com/rust-av/ssimulacra2_bin"

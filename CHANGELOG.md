@@ -1,3 +1,9 @@
+## Version 0.5.1
+
+- Add harmonic mean output
+- Add ttf feature to `plotters` library
+- Bump all dependencies
+
 ## Version 0.5.0
 
 - Bump minimum MSRV to 1.74.1
@@ -20,7 +26,7 @@
 ## Version 0.3.4
 
 - Add `--frame-threads` argument to support frame parallel multithreading
-  - This is set to 1 by default because it does linearly increase memory usage
+    - This is set to 1 by default because it does linearly increase memory usage
 - Various performance improvements
 
 ## Version 0.3.3
@@ -43,7 +49,7 @@
 ## Version 0.2.2
 
 - Fix decoding of AV1 files with overlays when using `ffmpeg_build` feature
-  - Or at least attempt to. There still seems to be some flakiness with linking libdav1d.
+    - Or at least attempt to. There still seems to be some flakiness with linking libdav1d.
 - Add support for YUVJ files
 
 ## Version 0.2.1
@@ -54,5 +60,6 @@
 
 - Add support for video comparison
 - This change splits ssimulacra2_rs into two subcommands:
-  - `ssimulacra2_rs image input.png output.png` for comparing still images. All popular input formats are supported.
-  - `ssimulacra2_rs video input.y4m output.y4m` for comparing videos. All popular input formats are supported. This feature requires the `ffmpeg` feature be enabled, which is on by default.
+    - `ssimulacra2_rs image input.png output.png` for comparing still images. All popular input formats are supported.
+    - `ssimulacra2_rs video input.y4m output.y4m` for comparing videos. All popular input formats are supported. This
+      feature requires the `ffmpeg` feature be enabled, which is on by default.
