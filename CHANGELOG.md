@@ -1,3 +1,9 @@
+## Version 0.5.2
+
+- Re-remove harmonic mean. Unfortunately it cannot be used on sets that have negative numbers, which includes
+  ssimulacra2 scores. Geometric mean was also tested, and in _theory_ it may be computed on sets with negative values,
+  in practice it cannot be due to computer algorithms using logarithms for the computation.
+
 ## Version 0.5.1
 
 - Add harmonic mean output

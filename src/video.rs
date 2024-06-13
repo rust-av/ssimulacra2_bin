@@ -17,7 +17,7 @@ use ssimulacra2::{
     compute_frame_ssimulacra2, ColorPrimaries, MatrixCoefficients, Pixel, TransferCharacteristic,
     Yuv, YuvConfig,
 };
-use statrs::statistics::{Data, Distribution, Median, OrderStatistics, Statistics};
+use statrs::statistics::{Data, Distribution, Median, OrderStatistics};
 
 const PROGRESS_CHARS: &str = "█▉▊▋▌▍▎▏  ";
 const INDICATIF_PROGRESS_TEMPLATE: &str = if cfg!(windows) {
@@ -454,7 +454,6 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     println!("Video Score for {} frames", frames);
     println!("Mean: {:.8}", data.mean().unwrap());
     println!("Median: {:.8}", data.median());
-    println!("Harmonic Mean: {:.8}", data.iter().harmonic_mean());
     println!("Std Dev: {:.8}", data.std_dev().unwrap());
     println!("5th Percentile: {:.8}", data.percentile(5));
     println!("95th Percentile: {:.8}", data.percentile(95));
