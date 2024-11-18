@@ -8,7 +8,7 @@ homepage = "https://github.com/rust-av/ssimulacra2_bin"
 license = "BSD-2-Clause"
 
 # When changing MSRV: Also update .github/workflows/rust.yml
-rust-version = "1.80.1"
+rust-version = "1.74"
 
 [dependencies]
 anyhow = "1.0.55"
@@ -24,7 +24,9 @@ ssimulacra2 = { version = "0.5.0", default-features = false }
 statrs = { version = "0.17.0", optional = true }
 
 [dependencies.image]
-version = "0.25.5"
+#version = "0.25.5"
+git = "https://github.com/image-rs/image"
+rev = "d6879d9"
 default-features = false
 features = ["png", "jpeg", "webp", "hdr", "exr", "avif-native"]
 
