@@ -153,8 +153,29 @@ fn main() {
 
 fn compare_images(source: &Path, distorted: &Path) {
     // For now just assumes the input is sRGB. Trying to keep this as simple as possible for now.
-    let source = image::open(source).expect("Failed to open source file");
-    let distorted = image::open(distorted).expect("Failed to open distorted file");
+    let source = if let Ok(image) = image::open(source) {
+        image
+    } else if let Ok(decoder) = jxl_oxide::integration::JxlDecoder::new(
+        std::fs::File::open(source)
+            .ok().expect("could not open source file"),
+    ) {
+        image::DynamicImage::from_decoder(decoder)
+            .ok().expect("failed to decode source jxl")
+    } else {
+        panic!("Failed to open the source file")
+    };
+
+    let distorted = if let Ok(image) = image::open(distorted) {
+        image
+    } else if let Ok(decoder) = jxl_oxide::integration::JxlDecoder::new(
+        std::fs::File::open(distorted)
+            .ok().expect("could not open distorted file"),
+    ) {
+        image::DynamicImage::from_decoder(decoder)
+            .ok().expect("failed to decode distorted jxl")
+    } else {
+        panic!("Failed to open the distorted file")
+    };
 
     let source_data = source
         .to_rgb32f()

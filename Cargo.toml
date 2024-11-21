@@ -19,6 +19,7 @@ av-metrics-decoders = { version = "0.3.1", features = [
 clap = { version = "4.0.18", features = ["derive"] }
 crossterm = "0.27.0"
 indicatif = "0.17.1"
+jxl-oxide = { version = "0.10.1", features = ["image"] }
 num-traits = { version = "0.2.15", optional = true }
 ssimulacra2 = { version = "0.5.0", default-features = false }
 statrs = { version = "0.17.0", optional = true }
