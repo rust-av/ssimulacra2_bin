@@ -115,8 +115,10 @@ fn pretty_spinner_style() -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
 }
 
+type VideoCompareMutex<E, F> = Mutex<((usize, usize), (E, F))>;
+
 fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
-    mtx: &Mutex<((usize, usize), (E, F))>,
+    mtx: &VideoCompareMutex<E, F>,
     src_yuvcfg: &YuvConfig,
     dst_yuvcfg: &YuvConfig,
     inc: usize,
@@ -404,13 +406,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
 
     let current_frame = 0usize;
     let start_frame = start_frame.unwrap_or(0);
-    let end_frame = {
-        if let Some(frames_to_compare) = frames_to_compare {
-            Some(start_frame + (frames_to_compare * inc))
-        } else {
-            None
-        }
-    };
+    let end_frame = frames_to_compare.map(|frames_to_compare| start_frame + (frames_to_compare * inc));
 
     let decoders = Arc::new(Mutex::new(((start_frame, current_frame), (source, distorted))));
 
