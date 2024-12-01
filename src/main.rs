@@ -45,6 +45,16 @@ enum Commands {
         #[arg(long, short)]
         frame_threads: Option<usize>,
 
+        /// Frame to start comparison at.
+        /// 1 is the first frame.
+        #[arg(long, short)]
+        start: Option<usize>,
+
+        /// How many frames to compare.
+        /// If left unspecified, all frames will be compared.
+        #[arg(long)]
+        frames: Option<usize>,
+
         /// How to increment current frame count; e.g. 10 will read every 10th frame.
         #[arg(long, short)]
         increment: Option<usize>,
@@ -99,6 +109,8 @@ fn main() {
             source,
             distorted,
             frame_threads,
+            start,
+            frames,
             increment,
             graph,
             verbose,
@@ -135,6 +147,8 @@ fn main() {
                 &source,
                 &distorted,
                 frame_threads,
+                start,
+                frames,
                 inc,
                 graph,
                 verbose,

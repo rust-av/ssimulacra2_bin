@@ -116,15 +116,37 @@ fn pretty_spinner_style() -> ProgressStyle {
 }
 
 fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
-    mtx: &Mutex<(usize, (E, F))>,
+    mtx: &Mutex<((usize, usize), (E, F))>,
     src_yuvcfg: &YuvConfig,
     dst_yuvcfg: &YuvConfig,
     inc: usize,
+    end_frame: Option<usize>,
     verbose: bool,
 ) -> Option<(usize, f64)> {
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
-        let curr_frame = guard.0;
+        let mut curr_frame = guard.0.1;
+        let start_frame = guard.0.0;
+
+        while curr_frame < start_frame {
+            let _src_frame = guard.1 .0.read_video_frame::<S>();
+            let _dst_frame = guard.1 .1.read_video_frame::<D>();
+            if _src_frame.is_none() || _dst_frame.is_none() {
+                break;
+            }
+            if verbose {
+                println!("Frame {}: skip (before start frame)", curr_frame);
+            }
+            curr_frame += 1;
+            guard.0.1 += 1;
+        }
+
+        
+        if let Some(end_frame) = end_frame {
+            if curr_frame+inc > end_frame {
+                return None;
+            }
+        }
 
         let src_frame = guard.1 .0.read_video_frame::<S>();
         let dst_frame = guard.1 .1.read_video_frame::<D>();
@@ -142,7 +164,7 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
                 }
             }
 
-            guard.0 += inc;
+            guard.0.1 += inc;
             (curr_frame, (sf, df))
         } else {
             return None;
@@ -163,6 +185,8 @@ pub fn compare_videos(
     source: &str,
     distorted: &str,
     frame_threads: usize,
+    start_frame: Option<usize>,
+    frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
     verbose: bool,
@@ -196,6 +220,8 @@ pub fn compare_videos(
             None,
             distorted_frame_count,
             frame_threads,
+            start_frame,
+            frames_to_compare,
             inc,
             graph,
             verbose,
@@ -227,6 +253,8 @@ pub fn compare_videos(
             source_frame_count,
             None,
             frame_threads,
+            start_frame,
+            frames_to_compare,
             inc,
             graph,
             verbose,
@@ -267,6 +295,8 @@ pub fn compare_videos(
         source_frame_count,
         distorted_frame_count,
         frame_threads,
+        start_frame,
+        frames_to_compare,
         inc,
         graph,
         verbose,
@@ -288,6 +318,8 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     source_frame_count: Option<usize>,
     distorted_frame_count: Option<usize>,
     frame_threads: usize,
+    start_frame: Option<usize>,
+    frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
     verbose: bool,
@@ -307,6 +339,15 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
             }
         }
     }
+
+
+    if start_frame.is_some() {
+        assert!(
+            source_frame_count.is_some() || distorted_frame_count.is_some(),
+            "--start-frame was used, but we could not get source or distorted frame count"
+        )
+    }
+
 
     let source_info = source.get_video_details();
     let distorted_info = distorted.get_video_details();
@@ -362,7 +403,17 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let dst_bd = dst_config.bit_depth;
 
     let current_frame = 0usize;
-    let decoders = Arc::new(Mutex::new((current_frame, (source, distorted))));
+    let start_frame = start_frame.unwrap_or(0);
+    let end_frame = {
+        if let Some(frames_to_compare) = frames_to_compare {
+            Some(start_frame + (frames_to_compare * inc))
+        } else {
+            None
+        }
+    };
+
+    let decoders = Arc::new(Mutex::new(((start_frame, current_frame), (source, distorted))));
+
     for _ in 0..frame_threads {
         let decoders = Arc::clone(&decoders);
         let result_tx = result_tx.clone();
@@ -375,6 +426,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         &src_config,
                         &dst_config,
                         inc,
+                        end_frame,
                         verbose,
                     ),
                     (8, _) => calc_score::<u8, u16, _, _>(
@@ -382,6 +434,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         &src_config,
                         &dst_config,
                         inc,
+                        end_frame,
                         verbose,
                     ),
                     (_, 8) => calc_score::<u16, u8, _, _>(
@@ -389,6 +442,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         &src_config,
                         &dst_config,
                         inc,
+                        end_frame,
                         verbose,
                     ),
                     (_, _) => calc_score::<u16, u16, _, _>(
@@ -396,6 +450,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         &src_config,
                         &dst_config,
                         inc,
+                        end_frame,
                         verbose,
                     ),
                 };
@@ -416,7 +471,9 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let progress = if stderr().is_tty() && !verbose {
         let frame_count = source_frame_count.or(distorted_frame_count);
         let pb = if let Some(frame_count) = frame_count {
-            ProgressBar::new(frame_count as u64)
+            let fc = frames_to_compare.unwrap_or(frame_count - start_frame);
+
+            ProgressBar::new(fc as u64)
                 .with_style(pretty_progress_style())
                 .with_message(", avg: N/A")
         } else {
@@ -443,7 +500,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
         results.insert(score.0, score.1);
         avg = avg + (score.1 - avg) / (min(results.len(), 10) as f64);
         progress.set_message(format!(", avg: {:.1$}", avg, 2));
-        progress.inc(inc.try_into().unwrap());
+        progress.inc(1);
     }
 
     progress.finish();
