@@ -43,16 +43,14 @@ enum Commands {
 
         /// How many worker threads to use for decoding & calculating scores.
         /// Note: Memory usage increases linearly with the number of workers.
-        #[arg(long, short)]
+        #[arg(long, short, verbatim_doc_comment)]
         frame_threads: Option<usize>,
 
-        /// Frame to start comparison at.
-        /// 
-        #[arg(long, short, default_value_t = 0)]
-        start: usize,
+        /// The amount of frames to skip.
+        #[arg(long, default_value_t = 0)]
+        skip_frames: usize,
 
-        /// How many frames to compare.
-        /// If left unspecified, all frames will be compared.
+        /// Limit the amount of frames to compare.
         #[arg(long)]
         frames: Option<usize>,
 
@@ -110,7 +108,7 @@ fn main() {
             source,
             distorted,
             frame_threads,
-            start,
+            skip_frames,
             frames,
             increment,
             graph,
@@ -148,7 +146,7 @@ fn main() {
                 &source,
                 &distorted,
                 frame_threads,
-                start,
+                skip_frames,
                 frames,
                 inc,
                 graph,
