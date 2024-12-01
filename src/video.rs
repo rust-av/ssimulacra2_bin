@@ -190,7 +190,7 @@ pub fn compare_videos(
     source: &str,
     distorted: &str,
     frame_threads: usize,
-    start_frame: Option<usize>,
+    start_frame: usize,
     frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
@@ -323,7 +323,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     source_frame_count: Option<usize>,
     distorted_frame_count: Option<usize>,
     frame_threads: usize,
-    start_frame: Option<usize>,
+    start_frame: usize,
     frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
@@ -346,7 +346,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     }
 
 
-    if start_frame.is_some() {
+    if start_frame != 0 {
         assert!(
             source_frame_count.is_some() || distorted_frame_count.is_some(),
             "--start-frame was used, but we could not get source or distorted frame count"
@@ -408,7 +408,6 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let dst_bd = dst_config.bit_depth;
 
     let current_frame = 0usize;
-    let start_frame = start_frame.unwrap_or(0);
     let end_frame = frames_to_compare
         .map(|frames_to_compare| start_frame + (frames_to_compare * inc));
 
