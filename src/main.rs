@@ -47,9 +47,9 @@ enum Commands {
         frame_threads: Option<usize>,
 
         /// Frame to start comparison at.
-        /// 1 is the first frame.
-        #[arg(long, short)]
-        start: Option<usize>,
+        /// 
+        #[arg(long, short, default_value_t = 0)]
+        start: usize,
 
         /// How many frames to compare.
         /// If left unspecified, all frames will be compared.
