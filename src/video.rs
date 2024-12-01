@@ -481,7 +481,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
         let frame_count = source_frame_count.or(distorted_frame_count);
         let pb = if let Some(frame_count) = frame_count {
             let fc = frames_to_compare.unwrap_or(frame_count - start_frame)
-                .min((frame_count as f64 / inc as f64).ceil() as usize);
+                .min(((frame_count - start_frame) as f64 / inc as f64).ceil() as usize);
 
             ProgressBar::new(fc as u64)
                 .with_style(pretty_progress_style())
