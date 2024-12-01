@@ -190,7 +190,7 @@ pub fn compare_videos(
     source: &str,
     distorted: &str,
     frame_threads: usize,
-    start_frame: usize,
+    skip_frames: usize,
     frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
@@ -225,7 +225,7 @@ pub fn compare_videos(
             None,
             distorted_frame_count,
             frame_threads,
-            start_frame,
+            skip_frames,
             frames_to_compare,
             inc,
             graph,
@@ -258,7 +258,7 @@ pub fn compare_videos(
             source_frame_count,
             None,
             frame_threads,
-            start_frame,
+            skip_frames,
             frames_to_compare,
             inc,
             graph,
@@ -300,7 +300,7 @@ pub fn compare_videos(
         source_frame_count,
         distorted_frame_count,
         frame_threads,
-        start_frame,
+        skip_frames,
         frames_to_compare,
         inc,
         graph,
@@ -323,7 +323,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     source_frame_count: Option<usize>,
     distorted_frame_count: Option<usize>,
     frame_threads: usize,
-    start_frame: usize,
+    skip_frames: usize,
     frames_to_compare: Option<usize>,
     inc: usize,
     graph: bool,
@@ -344,15 +344,6 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
             }
         }
     }
-
-
-    if start_frame != 0 {
-        assert!(
-            source_frame_count.is_some() || distorted_frame_count.is_some(),
-            "--start-frame was used, but we could not get source or distorted frame count"
-        )
-    }
-
 
     let source_info = source.get_video_details();
     let distorted_info = distorted.get_video_details();
@@ -409,13 +400,13 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
 
     let current_frame = 0usize;
     let end_frame = frames_to_compare
-        .map(|frames_to_compare| start_frame + (frames_to_compare * inc));
+        .map(|frames_to_compare| skip_frames + (frames_to_compare * inc));
 
     let video_compare = Arc::new(
         Mutex::new(
             VideoCompare {
                 current_frame,
-                next_frame: start_frame,
+                next_frame: skip_frames,
                 source,
                 distorted,
             }
@@ -479,8 +470,8 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let progress = if stderr().is_tty() && !verbose {
         let frame_count = source_frame_count.or(distorted_frame_count);
         let pb = if let Some(frame_count) = frame_count {
-            let fc = frames_to_compare.unwrap_or(frame_count - start_frame)
-                .min(((frame_count - start_frame) as f64 / inc as f64).ceil() as usize);
+            let fc = frames_to_compare.unwrap_or(frame_count - skip_frames)
+                .min(((frame_count - skip_frames) as f64 / inc as f64).ceil() as usize);
 
             ProgressBar::new(fc as u64)
                 .with_style(pretty_progress_style())
