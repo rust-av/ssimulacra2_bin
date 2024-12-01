@@ -115,7 +115,14 @@ fn pretty_spinner_style() -> ProgressStyle {
         .progress_chars(PROGRESS_CHARS)
 }
 
-type VideoCompareMutex<E, F> = Mutex<((usize, usize), (E, F))>;
+type VideoCompareMutex<E, F> = Arc<Mutex<VideoCompare<E, F>>>;
+
+struct VideoCompare<E: Decoder, F: Decoder> {
+    current_frame: usize,
+    next_frame: usize,
+    source: E,
+    distorted: F,
+}
 
 fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
     mtx: &VideoCompareMutex<E, F>,
@@ -127,46 +134,42 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
 ) -> Option<(usize, f64)> {
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
-        let mut curr_frame = guard.0.1;
-        let start_frame = guard.0.0;
+        let mut curr_frame = guard.current_frame;
+        // We passed this as start frame.
+        // However, we are going to use it to store the next frame we should compute.
+        let mut next_frame = guard.next_frame;
 
-        while curr_frame < start_frame {
-            let _src_frame = guard.1 .0.read_video_frame::<S>();
-            let _dst_frame = guard.1 .1.read_video_frame::<D>();
+        //println!("{curr_frame} < {next_frame}");
+
+        while curr_frame < next_frame {
+            let _src_frame = guard.source.read_video_frame::<S>();
+            let _dst_frame = guard.distorted.read_video_frame::<D>();
             if _src_frame.is_none() || _dst_frame.is_none() {
                 break;
             }
             if verbose {
-                println!("Frame {}: skip (before start frame)", curr_frame);
+                println!("Frame {}: skip", curr_frame);
             }
             curr_frame += 1;
-            guard.0.1 += 1;
         }
 
-        
+        next_frame = curr_frame + inc;
+
         if let Some(end_frame) = end_frame {
-            if curr_frame+inc > end_frame {
+            if next_frame > end_frame {
                 return None;
             }
         }
 
-        let src_frame = guard.1 .0.read_video_frame::<S>();
-        let dst_frame = guard.1 .1.read_video_frame::<D>();
+        let src_frame = guard.source.read_video_frame::<S>();
+        let dst_frame = guard.distorted.read_video_frame::<D>();
+
+        guard.current_frame = curr_frame + 1;
+        guard.next_frame = next_frame;
+
+        //println!("current: {}, next: {}", curr_frame, next_frame);
 
         if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
-            // skip remaining frames in increment size
-            for ii in 1..inc {
-                let _src_frame = guard.1 .0.read_video_frame::<S>();
-                let _dst_frame = guard.1 .1.read_video_frame::<D>();
-                if _src_frame.is_none() || _dst_frame.is_none() {
-                    break;
-                }
-                if verbose {
-                    println!("Frame {}: skip", curr_frame + ii);
-                }
-            }
-
-            guard.0.1 += inc;
             (curr_frame, (sf, df))
         } else {
             return None;
@@ -406,19 +409,29 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
 
     let current_frame = 0usize;
     let start_frame = start_frame.unwrap_or(0);
-    let end_frame = frames_to_compare.map(|frames_to_compare| start_frame + (frames_to_compare * inc));
+    let end_frame = frames_to_compare
+        .map(|frames_to_compare| start_frame + (frames_to_compare * inc));
 
-    let decoders = Arc::new(Mutex::new(((start_frame, current_frame), (source, distorted))));
+    let video_compare = Arc::new(
+        Mutex::new(
+            VideoCompare {
+                current_frame,
+                next_frame: start_frame,
+                source,
+                distorted,
+            }
+        )
+    );
 
     for _ in 0..frame_threads {
-        let decoders = Arc::clone(&decoders);
+        let video_compare = Arc::clone(&video_compare);
         let result_tx = result_tx.clone();
 
         std::thread::spawn(move || {
             loop {
                 let score = match (src_bd, dst_bd) {
                     (8, 8) => calc_score::<u8, u8, _, _>(
-                        &decoders,
+                        &video_compare,
                         &src_config,
                         &dst_config,
                         inc,
@@ -426,7 +439,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         verbose,
                     ),
                     (8, _) => calc_score::<u8, u16, _, _>(
-                        &decoders,
+                        &video_compare,
                         &src_config,
                         &dst_config,
                         inc,
@@ -434,7 +447,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         verbose,
                     ),
                     (_, 8) => calc_score::<u16, u8, _, _>(
-                        &decoders,
+                        &video_compare,
                         &src_config,
                         &dst_config,
                         inc,
@@ -442,7 +455,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
                         verbose,
                     ),
                     (_, _) => calc_score::<u16, u16, _, _>(
-                        &decoders,
+                        &video_compare,
                         &src_config,
                         &dst_config,
                         inc,
@@ -467,7 +480,8 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
     let progress = if stderr().is_tty() && !verbose {
         let frame_count = source_frame_count.or(distorted_frame_count);
         let pb = if let Some(frame_count) = frame_count {
-            let fc = frames_to_compare.unwrap_or(frame_count - start_frame);
+            let fc = frames_to_compare.unwrap_or(frame_count - start_frame)
+                .min((frame_count as f64 / inc as f64).ceil() as usize);
 
             ProgressBar::new(fc as u64)
                 .with_style(pretty_progress_style())
