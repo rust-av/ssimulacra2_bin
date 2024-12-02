@@ -134,40 +134,32 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
 ) -> Option<(usize, f64)> {
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
-        let mut curr_frame = guard.current_frame;
-        // We passed this as start frame.
-        // However, we are going to use it to store the next frame we should compute.
-        let mut next_frame = guard.next_frame;
 
-        //println!("{curr_frame} < {next_frame}");
+        let skip_frames = guard.next_frame - guard.current_frame;
 
-        while curr_frame < next_frame {
+        if let Some(end_frame) = end_frame {
+            if guard.next_frame >= end_frame {
+                return None;
+            }
+        }
+
+        for ii in 1..skip_frames {
             let _src_frame = guard.source.read_video_frame::<S>();
             let _dst_frame = guard.distorted.read_video_frame::<D>();
             if _src_frame.is_none() || _dst_frame.is_none() {
                 break;
             }
             if verbose {
-                println!("Frame {}: skip", curr_frame);
-            }
-            curr_frame += 1;
-        }
-
-        next_frame = curr_frame + inc;
-
-        if let Some(end_frame) = end_frame {
-            if next_frame > end_frame {
-                return None;
+                println!("Frame {}: skip", guard.current_frame + ii);
             }
         }
 
         let src_frame = guard.source.read_video_frame::<S>();
         let dst_frame = guard.distorted.read_video_frame::<D>();
 
-        guard.current_frame = curr_frame + 1;
-        guard.next_frame = next_frame;
-
-        //println!("current: {}, next: {}", curr_frame, next_frame);
+        let curr_frame = guard.next_frame;
+        guard.current_frame = guard.next_frame;
+        guard.next_frame += inc;
 
         if let (Some(sf), Some(df)) = (src_frame, dst_frame) {
             (curr_frame, (sf, df))
