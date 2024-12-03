@@ -135,7 +135,7 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
     let (frame_idx, (src_frame, dst_frame)) = {
         let mut guard = mtx.lock().unwrap();
 
-        let skip_frames = guard.next_frame - guard.current_frame;
+        let distance_to_next = guard.next_frame - guard.current_frame;
 
         if let Some(end_frame) = end_frame {
             if guard.next_frame >= end_frame {
@@ -143,7 +143,7 @@ fn calc_score<S: Pixel, D: Pixel, E: Decoder, F: Decoder>(
             }
         }
 
-        for ii in 1..skip_frames {
+        for ii in 1..distance_to_next {
             let _src_frame = guard.source.read_video_frame::<S>();
             let _dst_frame = guard.distorted.read_video_frame::<D>();
             if _src_frame.is_none() || _dst_frame.is_none() {
