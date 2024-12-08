@@ -490,7 +490,7 @@ fn compare_videos_inner<D: Decoder + 'static, E: Decoder + 'static>(
 
         results.insert(score.0, score.1);
         rolling_mean = rolling_mean + (score.1 - rolling_mean) / (results.len() as f64);
-        progress.set_message(format!(", mean: {:.1$}", rolling_mean, 2));
+        progress.set_message(format!(", mean: {rolling_mean:.2}"));
         progress.inc(1);
     }
 
