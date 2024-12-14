@@ -33,12 +33,12 @@ Install LSMASHSource VapourSynth plugin from https://github.com/AkarinVS/L-SMASH
 
 Do not install or download any pre-release.
 1) Follow Vapoursynth's installation step http://www.vapoursynth.com/doc/installation.html#windows-installation (Not the portable installation)
-       1. If you intends to install Vapoursynth system-wide instead of local, Python will also need to be system-wide. 
+   1. If you intends to install Vapoursynth system-wide instead of local, Python will also need to be system-wide. 
 3) Get latest version of VapourSynth-x64-R##.exe
 4) Run the .exe file to install VapourSynth, don't modify or change any setting if you are not familar with it
 5) After Vapoursynth is installed, find its path
-       1.  Local - C:\Users\<username>\AppData\Local\Programs\VapourSynth\ (REPLACE <username> WITH YOUR)
-       2.  System-wide - C:\VapourSynth\
+   1. Local - C:\Users\<username>\AppData\Local\Programs\VapourSynth\ (REPLACE <username> WITH YOUR)
+   2. System-wide - C:\VapourSynth\
 7) Then download the latest release-x86_64-cachedir-cwd.zip from https://github.com/AkarinVS/L-SMASH-Works/releases/tag/vA.3j
 8) Decompress the release-x86_64-cachedir-cwd.zip, copy and paste the libvslsmashsource.dll to C:\Path\to\VapourSynth\plugins\
 9) Install Rust on https://www.rust-lang.org/tools/install,  
