@@ -33,21 +33,22 @@ Install LSMASHSource VapourSynth plugin from https://github.com/AkarinVS/L-SMASH
 
 Do not install or download any pre-release.
 1) Follow Vapoursynth's installation step http://www.vapoursynth.com/doc/installation.html#windows-installation (Not the portable installation)
-   1. If you intends to install Vapoursynth system-wide instead of local, Python will also need to be system-wide. 
-3) Get latest version of VapourSynth-x64-R##.exe
+   - If you intend to install Vapoursynth system-wide instead of local, Python will also need to be system-wide. 
+3) Get latest version of `VapourSynth-x64-R##.exe`
 4) Run the .exe file to install VapourSynth, don't modify or change any setting if you are not familar with it
 5) After Vapoursynth is installed, find its path
-   1. Local - C:\Users\<username>\AppData\Local\Programs\VapourSynth\ (REPLACE <username> WITH YOUR)
-   2. System-wide - C:\VapourSynth\
-7) Then download the latest release-x86_64-cachedir-cwd.zip from https://github.com/AkarinVS/L-SMASH-Works/releases/tag/vA.3j
-8) Decompress the release-x86_64-cachedir-cwd.zip, copy and paste the libvslsmashsource.dll to C:\Path\to\VapourSynth\plugins\
-9) Install Rust on https://www.rust-lang.org/tools/install,  
-10) Open Powershell and run rustc --version to check if it has been installed
-11) Copy the full path C:\Path\to\VapourSynth\sdk\lib64
-12) Enter the command on Powershell with the copied path: $env:LIB="C:\Path\to\VapourSynth\sdk\lib64;$env:LIB"
-13) If it fail because it require Visual Studio or Visual Studio Tools, you can download either of them.
-    1. Download on https://visualstudio.microsoft.com/downloads/ Find the "Tools for Visual Studio" bar and download the "Remote Tools for Visual Studio 2022". Run it.
-    2. Make sure Desktop Development with C++ is checked, leave the optional check installation alone and download it.
-    3. Retry step 8 again after you reboot your PC.
-14) Run ssimulacra2_rs -h to check if it's running.
+   1. Local - `C:\Users\<username>\AppData\Local\Programs\VapourSynth\`
+   2. System-wide - `C:\VapourSynth\` or `C:\Program Files\VapourSynth`
+7) Then download the latest release-x86_64-cachedir-cwd.zip from https://github.com/AkarinVS/L-SMASH-Works/releases/tag/latest
+8) Decompress the release-x86_64-cachedir-cwd.zip, copy and paste the libvslsmashsource.dll to `C:\Path\to\VapourSynth\plugins\`
+9) Install Rust from https://www.rust-lang.org/tools/install
+10) Open Powershell and run `rustc --version` to check if it has been installed
+11) Copy the full path `C:\Path\to\VapourSynth\sdk\lib64`
+12) Enter the command on Powershell with the copied path: `$env:LIB="C:\Path\to\VapourSynth\sdk\lib64;$env:LIB"`
+13) If it fails because it requires Visual Studio or Visual Studio Tools, you can download either of them.
+    1. Download from https://visualstudio.microsoft.com/downloads/
+    2. Find the "Tools for Visual Studio" bar and download the "Remote Tools for Visual Studio 2022".
+    3. Make sure Desktop Development with C++ is checked, leave the optional check installation alone and download it.
+    4. Retry step 8 again after you reboot your PC.
+14) Run `ssimulacra2_rs -h` to check if it's running.
 15) You're done!
