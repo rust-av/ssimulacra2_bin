@@ -45,10 +45,11 @@ Do not install or download any pre-release.
 10) Open Powershell and run `rustc --version` to check if it has been installed
 11) Copy the full path `C:\Path\to\VapourSynth\sdk\lib64`
 12) Enter the command on Powershell with the copied path: `$env:LIB="C:\Path\to\VapourSynth\sdk\lib64;$env:LIB"`
-13) If it fails because it requires Visual Studio or Visual Studio Tools, you can download either of them.
+13) Then enter `cargo install ssimulacra2_rs`
+14) If it fails because it requires Visual Studio or Visual Studio Tools, you can download either of them.
     1. Download from https://visualstudio.microsoft.com/downloads/
     2. Find the "Tools for Visual Studio" bar and download the "Remote Tools for Visual Studio 2022".
     3. Make sure Desktop Development with C++ is checked, leave the optional check installation alone and download it.
-    4. Retry step 8 again after you reboot your PC.
-14) Run `ssimulacra2_rs -h` to check if it's running.
-15) You're done!
+    4. Retry step 10 again after you reboot your PC.
+15) Run `ssimulacra2_rs -h` to check if it's running.
+16) You're done!
