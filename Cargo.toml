@@ -24,7 +24,7 @@ ssimulacra2 = { version = "0.5.0", default-features = false }
 statrs = { version = "0.17.0", optional = true }
 
 [dependencies.image]
-version = "0.25.1"
+version = "0.25.6"
 default-features = false
 features = ["png", "jpeg", "webp", "hdr", "exr"]
 
@@ -39,5 +39,6 @@ lto = "thin"
 codegen-units = 1
 
 [features]
-default = ["video"]
+default = ["video", "avif"]
 video = ["av-metrics-decoders", "plotters", "statrs", "num-traits"]
+avif = ["image/avif-native"]
